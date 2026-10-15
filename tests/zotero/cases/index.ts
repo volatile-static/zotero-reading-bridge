@@ -1,6 +1,6 @@
 /**
  * Every live case in execution order. Order matters: seeding precedes everything that reads fixtures,
- * the read-only proof runs after all other tool traffic, and the lifecycle toggles run last.
+ * the read-only proof runs after all other tool traffic, and the lifecycle cases (add-on toggle, pane) run last.
  */
 import { contextCases } from "./context.js";
 import { harnessCases } from "./harness.js";

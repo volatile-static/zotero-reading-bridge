@@ -42,7 +42,6 @@ import {
   TYPECHECK_PROJECTS,
   ZOTERO_BUNDLES,
   ZOTERO_COPY_DIRS,
-  ZOTERO_COPY_FILES,
   ZOTERO_MANIFEST,
   ZOTERO_SOURCE_DIR,
   sourceArchivePrefix,
@@ -173,12 +172,8 @@ async function stageZotero(ctx: BuildContext): Promise<void> {
   }
   await assertBundleContracts(ctx, bundled);
 
-  for (const file of ZOTERO_COPY_FILES) {
-    const rel = `${ZOTERO_SOURCE_DIR}/${file}`;
-    let data: Buffer | string = requireFile(ctx, rel);
-    if (file === ZOTERO_MANIFEST) data = withVersion(ctx, rel, data);
-    stage(ctx, STAGE_NAMES.zotero, file, data);
-  }
+  const manifest = `${ZOTERO_SOURCE_DIR}/${ZOTERO_MANIFEST}`;
+  stage(ctx, STAGE_NAMES.zotero, ZOTERO_MANIFEST, withVersion(ctx, manifest, requireFile(ctx, manifest)));
   for (const dir of ZOTERO_COPY_DIRS) {
     const base = `${ZOTERO_SOURCE_DIR}/${dir}`;
     requireDirectory(ctx, base);

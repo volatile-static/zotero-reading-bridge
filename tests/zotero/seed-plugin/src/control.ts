@@ -1,5 +1,5 @@
 /**
- * Process-level controls for the harness: environment report, the bridge's enable pref, add-on
+ * Process-level controls for the harness: environment report, whitelisted Zotero prefs, add-on
  * disable/enable through AddonManager, and a clean quit.
  */
 import {
@@ -82,7 +82,7 @@ export async function setPref(request: PrefRequest): Promise<PrefResult> {
   }
   if (request.value === null) Zotero.Prefs.clear(request.name, true);
   else Zotero.Prefs.set(request.name, request.value, true);
-  return { ok: true, name: request.name, value: Zotero.Prefs.get(request.name, true) ?? null, endpoints: registeredEndpoints() };
+  return { ok: true, name: request.name, value: Zotero.Prefs.get(request.name, true) ?? null };
 }
 
 /** Add or remove a tag on one item and save it, exactly like a user edit (notifier events included). */

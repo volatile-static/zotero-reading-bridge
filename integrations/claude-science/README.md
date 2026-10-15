@@ -12,7 +12,7 @@
 
 ## 连接前提
 
-Claude Science 必须能以 MCP Streamable HTTP 访问 `http://127.0.0.1:23119/bridge/mcp`，并且 Zotero 正在同一台电脑上运行、Zotero AI Bridge 已启用。桥接只监听 IPv4 回环地址，没有身份验证，只读。
+Claude Science 必须能以 MCP Streamable HTTP 访问 `http://127.0.0.1:23119/bridge/mcp`，并且 Zotero 正在同一台电脑上运行、Zotero AI Bridge 插件已启用（**工具 → 插件**）。桥接只监听 IPv4 回环地址，没有身份验证，只读。
 
 ## 静态分析结论：为什么判定不兼容
 
@@ -26,7 +26,7 @@ Claude Science 必须能以 MCP Streamable HTTP 访问 `http://127.0.0.1:23119/b
 
 ## 如何复测（Claude Science 更新后）
 
-1. 启动 Zotero，在 Zotero 设置的「Zotero AI Bridge」页面确认桥接已启用，并记下页面显示的实际地址。
+1. 启动 Zotero，在 Zotero 设置的「Zotero AI Bridge」页面确认状态为“运行中”，并记下页面显示的实际地址。
 2. 先用已验证的客户端（Codex 或 Claude Code）调用一次 `get_status`，确认桥接本身正常。
 3. 在 Claude Science 中打开 Settings > Connectors > Add connector > Remote，URL 填 `http://127.0.0.1:23119/bridge/mcp`，传输选择 Streamable HTTP，不填任何凭据。记录是否被拒绝以及完整的错误文字。
 4. 复测前在 Zotero 中打开 **帮助 → 调试日志 → 启用**（仅复测期间开启，隐私说明见 `docs/install-zotero.md` 第 7 节），以便看到

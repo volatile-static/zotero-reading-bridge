@@ -15,7 +15,7 @@
 
 ## 前提
 
-1. Zotero 11 已安装 Zotero AI Bridge 插件（`zotero-ai-bridge.xpi`），并在 Zotero 设置的「Zotero AI Bridge」页面中启用。
+1. Zotero 11 已安装并启用 Zotero AI Bridge 插件（`zotero-ai-bridge.xpi`），Zotero 设置的「Zotero AI Bridge」页面状态为“运行中”。
 2. Claude Code 2.1.118 或更新版本（支持 `mcp_tool` 类型的 Hook）。插件的校验与安装在 2.1.295 上验证过。
 3. **不要**再用 `claude mcp add` 手动注册同一个地址：Claude Code 按 URL 去重，手动注册优先，插件服务器会被隐藏，
    插件 Hook 随之失效。

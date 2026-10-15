@@ -26,7 +26,6 @@ import {
   type BridgeState,
   type BridgeStatusInputs,
 } from "./settings/client-config.js";
-import { isBridgeEnabled, observeBridgeEnabled } from "./settings/preferences.js";
 import { attachmentHandlers } from "./tools/attachments.js";
 import { collectionHandlers } from "./tools/collections.js";
 import { contentHandlers } from "./tools/content.js";
@@ -58,20 +57,10 @@ class BridgeRuntime {
   private registration: EndpointRegistration | null = null;
   private paneID: string | null = null;
   private restoreResponseCodes: (() => void) | null = null;
-  private stopObservingPref: (() => void) | null = null;
   private stopResultCaching: (() => void) | null = null;
-  private readonly listeners = new Set<(state: BridgeState) => void>();
   /** Pending sleeps, so shutdown can cancel the timer and release the waiting loop. */
   private readonly sleeps = new Map<ReturnType<typeof setTimeout>, () => void>();
-  private readonly api: BridgePaneApi = {
-    getState: () => this.getState(),
-    subscribe: (listener) => {
-      this.listeners.add(listener);
-      return () => {
-        this.listeners.delete(listener);
-      };
-    },
-  };
+  private readonly api: BridgePaneApi = { getState: () => this.getState() };
 
   constructor(private readonly data: ZoteroAIBridgeStartupData) {}
 
@@ -96,8 +85,7 @@ class BridgeRuntime {
     Zotero.ZoteroAIBridge = this.api;
     // Result caches are enabled only together with the change observer that clears them.
     this.stopResultCaching = startResultCaching();
-    this.stopObservingPref = observeBridgeEnabled(() => this.apply());
-    this.apply();
+    this.serve();
     await this.registerPane();
     this.prewarm().catch((e: unknown) => {
       Zotero.debug(`${LOG_PREFIX} item pre-warm stopped: ${errorName(e)}`);
@@ -107,11 +95,6 @@ class BridgeRuntime {
   /** Same cleanup for every shutdown reason; each step runs even if an earlier one throws. */
   stop(): void {
     this.stopped = true;
-    this.cleanup(() => {
-      const stopObservingPref = this.stopObservingPref;
-      this.stopObservingPref = null;
-      stopObservingPref?.();
-    });
     this.cleanup(() => this.unregisterEndpoints());
     this.cleanup(() => {
       const stopResultCaching = this.stopResultCaching;
@@ -132,7 +115,6 @@ class BridgeRuntime {
     });
     this.cleanup(() => {
       if (Zotero.ZoteroAIBridge === this.api) delete Zotero.ZoteroAIBridge;
-      this.listeners.clear();
     });
     this.cleanup(() => {
       const restoreResponseCodes = this.restoreResponseCodes;
@@ -164,7 +146,6 @@ class BridgeRuntime {
 
   private statusInputs(): BridgeStatusInputs {
     return {
-      enabled: isBridgeEnabled(),
       error: this.error,
       port: readServerPort(),
       loopbackVerified: this.loopbackVerified,
@@ -176,7 +157,6 @@ class BridgeRuntime {
     return {
       status: resolveBridgeStatus(inputs),
       version: this.data.version,
-      enabled: inputs.enabled,
       port: inputs.port,
       loopbackVerified: this.loopbackVerified,
       registeredPaths: this.registration ? [...this.registration.paths] : [],
@@ -184,23 +164,20 @@ class BridgeRuntime {
     };
   }
 
-  /** Bring endpoint registration in line with the current status (called at start and on every pref change). */
-  private apply(): void {
-    if (this.stopped) return;
+  /**
+   * Registers the endpoints once, at start, if the status allows serving. The bridge has no switch of its own:
+   * disabling the plugin in Zotero shuts this runtime down, and stop() unregisters them.
+   */
+  private serve(): void {
     const inputs = this.statusInputs();
-    const shouldServe = resolveBridgeStatus(inputs) === "running";
-    if (shouldServe && !this.registration && this.serving && inputs.port !== null) {
-      this.registration = registerEndpoints({
-        registry: this.serving.registry,
-        instructions: this.serving.instructions,
-        serverVersion: this.data.version,
-        port: inputs.port,
-      });
-      Zotero.debug(`${LOG_PREFIX} serving ${ENDPOINT_PATHS.join(" and ")} on 127.0.0.1:${inputs.port}`);
-    } else if (!shouldServe && this.registration) {
-      this.unregisterEndpoints();
-    }
-    this.notify();
+    if (resolveBridgeStatus(inputs) !== "running" || !this.serving || inputs.port === null) return;
+    this.registration = registerEndpoints({
+      registry: this.serving.registry,
+      instructions: this.serving.instructions,
+      serverVersion: this.data.version,
+      port: inputs.port,
+    });
+    Zotero.debug(`${LOG_PREFIX} serving ${ENDPOINT_PATHS.join(" and ")} on 127.0.0.1:${inputs.port}`);
   }
 
   private unregisterEndpoints(): void {
@@ -209,19 +186,6 @@ class BridgeRuntime {
     this.registration = null;
     registration.unregister();
     Zotero.debug(`${LOG_PREFIX} endpoints unregistered`);
-  }
-
-  private notify(): void {
-    if (this.listeners.size === 0) return;
-    const state = this.getState();
-    for (const listener of [...this.listeners]) {
-      try {
-        listener(state);
-      } catch {
-        // A closed preferences window leaves a dead wrapper behind; forget it.
-        this.listeners.delete(listener);
-      }
-    }
   }
 
   private async registerPane(): Promise<void> {

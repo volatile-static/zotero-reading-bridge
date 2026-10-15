@@ -8,10 +8,6 @@ export const BRIDGE_TITLE = "Zotero AI Bridge";
 /** Zotero add-on id (manifest applications.zotero.id). */
 export const ZOTERO_ADDON_ID = "zotero-ai-bridge@zotero-ai-bridge.local";
 
-/** Preference branch for the plugin's own prefs. */
-export const PREF_BRANCH = "extensions.zotero-ai-bridge.";
-export const PREF_ENABLED = `${PREF_BRANCH}enabled`;
-
 /** Primary endpoint path and its alias; both share one handler and one access policy. */
 export const ENDPOINT_PATH = "/bridge/mcp";
 export const ENDPOINT_ALIAS_PATH = "/codex/mcp";

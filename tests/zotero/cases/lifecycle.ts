@@ -1,8 +1,8 @@
 /**
  * Read-only proof and lifecycle (DESIGN 2.G): a full battery of tool calls leaves the database and the
- * attachment files byte-for-byte unchanged; the enable pref and add-on disable/enable register and
- * unregister the endpoints live without disturbing Zotero's own connector endpoints; the preferences pane
- * loads with its Fluent strings and follows the enable pref live.
+ * attachment files byte-for-byte unchanged; add-on disable/enable (the bridge's only off switch) unregisters
+ * and registers the endpoints live without disturbing Zotero's own connector endpoints; the preferences pane
+ * loads with its Fluent strings, status and address.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -12,7 +12,6 @@ import {
   ENDPOINT_ALIAS_PATH,
   ENDPOINT_PATH,
   ENDPOINT_PATHS,
-  PREF_ENABLED,
   ZOTERO_ADDON_ID,
   endpointUrl,
 } from "../../../shared/types/bridge.js";
@@ -20,7 +19,7 @@ import { BULK_TAG } from "../fixtures/data.js";
 import { readBridgeFtl, renderFtlValue, stripIsolationMarks, type FtlMessage } from "../lib/ftl.js";
 import { getRequest } from "../lib/http.js";
 import { REPO_ROOT } from "../lib/paths.js";
-import type { PaneState, PrefsPaneResult } from "../seed-api.js";
+import type { PaneState } from "../seed-api.js";
 import type { McpClient } from "../lib/mcp.js";
 import { diffFingerprints, stableFingerprint } from "../lib/readonly.js";
 import { captureHook } from "./context.js";
@@ -99,7 +98,6 @@ async function assertBridgeOn(ctx: HarnessContext): Promise<void> {
     assert.equal(init.message.result.serverInfo.name, "zotero-ai-bridge");
   }
   const status = await ctx.mcp(ENDPOINT_ALIAS_PATH).tool("get_status");
-  assert.equal(status.bridge.enabled, true);
   assert.equal(status.bridge.status, "running");
   const found = await ctx.mcp().tool("search_items", { query: "深度学习" });
   assert.ok(found.items.some((i: any) => i.key === fixtureKey(ctx, "item-zh-article")), "search after re-enable");
@@ -111,9 +109,7 @@ async function assertBridgeOn(ctx: HarnessContext): Promise<void> {
   assert.equal(ping.response?.status, 200, "connector ping with the bridge on");
 }
 
-const PANE_POLL_MS = 15000;
 const STATUS_RUNNING = "zotero-ai-bridge-pref-status-running";
-const STATUS_DISABLED = "zotero-ai-bridge-pref-status-disabled";
 
 /** Fluent ids written statically in the shipped pane markup (the status id is set by the pane script). */
 function staticPaneL10nIds(): string[] {
@@ -150,17 +146,6 @@ function assertPaneTranslated(pane: PaneState, en: Map<string, FtlMessage>, port
   return pane.elements.length;
 }
 
-async function pollPane(ctx: HarnessContext, what: string, accept: (pane: PaneState) => boolean): Promise<PaneState> {
-  const deadline = Date.now() + PANE_POLL_MS;
-  let last: PrefsPaneResult | null = null;
-  while (Date.now() < deadline) {
-    last = await ctx.seed.prefsPane({ action: "report", pluginID: ZOTERO_ADDON_ID });
-    if (last.pane && accept(last.pane)) return last.pane;
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  throw new Error(`Preferences pane did not show ${what} within ${PANE_POLL_MS} ms: ${JSON.stringify(last?.pane ?? null)}`);
-}
-
 export const lifecycleCases: TestCase[] = [
   {
     id: "lifecycle.read-only",
@@ -185,28 +170,6 @@ export const lifecycleCases: TestCase[] = [
       assert.deepEqual(diffs, [], `data changed during read-only calls: ${diffs.join("; ")}`);
       await ctx.seed.ui({ action: "closeReaders" });
       return { toolCalls: count + 1, tables: Object.keys(before.tables).length, files: files.length, maxima: after.maxima };
-    },
-  },
-  {
-    id: "lifecycle.pref-toggle",
-    title: "extensions.zotero-ai-bridge.enabled=false unregisters both paths (404); true restores them",
-    requires: ["bridge", "fixtures"],
-    timeoutMs: 90000,
-    async run(ctx) {
-      try {
-        const off = await ctx.seed.pref({ name: PREF_ENABLED, value: false });
-        assert.equal(off.value, false);
-        await waitForEndpoints(ctx, false);
-        const statuses = await assertBridgeOff(ctx);
-        const on = await ctx.seed.pref({ name: PREF_ENABLED, value: true });
-        assert.equal(on.value, true);
-        await waitForEndpoints(ctx, true);
-        await assertBridgeOn(ctx);
-        return { whileDisabled: statuses };
-      } finally {
-        // Back to the shipped default (user value cleared) whatever happened above.
-        await ctx.seed.pref({ name: PREF_ENABLED, value: null });
-      }
     },
   },
   {
@@ -238,7 +201,7 @@ export const lifecycleCases: TestCase[] = [
   {
     // Runs after the add-on toggle, so it also covers the pane re-registered by the re-enabled add-on.
     id: "lifecycle.prefs-pane",
-    title: "Preferences pane loads with en-US Fluent strings (zh-CN registered too), pref-bound checkbox, live status and address",
+    title: "Preferences pane loads with en-US Fluent strings (zh-CN registered too), running status and address",
     requires: ["bridge"],
     timeoutMs: 120000,
     async run(ctx) {
@@ -266,23 +229,11 @@ export const lifecycleCases: TestCase[] = [
         assert.ok(pane?.loaded && pane.shown, "pane loaded and shown");
         assert.equal(pane.heading, BRIDGE_TITLE, "pane heading");
         const translated = assertPaneTranslated(pane, en, ctx.port);
-        assert.deepEqual(pane.checkbox, { preference: PREF_ENABLED, checked: true }, "enable checkbox bound to the pref");
         assert.equal(pane.status?.l10nId, STATUS_RUNNING, "status message");
         assert.equal(stripIsolationMarks(pane.status.text), expectedStatus(en, STATUS_RUNNING, ctx.port), "status text");
         assert.equal(pane.address, endpointUrl(ctx.port, ENDPOINT_PATH));
         assert.equal(pane.alias, endpointUrl(ctx.port, ENDPOINT_ALIAS_PATH));
         assert.deepEqual(Object.entries(pane.buttonsDisabled).filter(([, disabled]) => disabled), [], "copy buttons enabled");
-
-        // The pane follows the pref live: Zotero syncs the checkbox, the bridge's subscription re-renders the status.
-        await ctx.seed.pref({ name: PREF_ENABLED, value: false });
-        const disabledText = expectedStatus(en, STATUS_DISABLED, ctx.port);
-        const off = await pollPane(ctx, "the disabled state", (p) => p.checkbox?.checked === false && p.status?.text === disabledText);
-        assert.equal(off.status?.l10nId, STATUS_DISABLED);
-        await waitForEndpoints(ctx, false);
-        await ctx.seed.pref({ name: PREF_ENABLED, value: null });
-        const runningText = expectedStatus(en, STATUS_RUNNING, ctx.port);
-        await pollPane(ctx, "the running state", (p) => p.checkbox?.checked === true && stripIsolationMarks(p.status?.text ?? "") === runningText);
-        await waitForEndpoints(ctx, true);
 
         const closed = await ctx.seed.prefsPane({ action: "close", pluginID: ZOTERO_ADDON_ID });
         assert.equal(closed.windowOpen, false, "preferences window closed");
@@ -291,12 +242,10 @@ export const lifecycleCases: TestCase[] = [
           translatedElements: translated,
           formattedMessages: probeIds.length,
           status: pane.status,
-          disabledStatus: off.status,
           address: pane.address,
           openMs: opened.ms,
         };
       } finally {
-        await ctx.seed.pref({ name: PREF_ENABLED, value: null }).catch(() => undefined);
         // Closing is a no-op when the window is already gone (also covers a pane that never finished loading).
         await ctx.seed.prefsPane({ action: "close", pluginID: ZOTERO_ADDON_ID }).catch(() => undefined);
       }

@@ -144,15 +144,14 @@ describe("claudeCodeHookSettingsJson", () => {
 });
 
 describe("resolveBridgeStatus", () => {
-  const healthy: BridgeStatusInputs = { enabled: true, error: null, port: 23119, loopbackVerified: true };
+  const healthy: BridgeStatusInputs = { error: null, port: 23119, loopbackVerified: true };
 
   it("is running only when every precondition holds", () => {
     assert.equal(resolveBridgeStatus(healthy), "running");
   });
 
-  it("applies precedence: disabled, error, server-not-running, loopback-unverified", () => {
+  it("applies precedence: error, server-not-running, loopback-unverified", () => {
     const cases: Array<[Partial<BridgeStatusInputs>, string]> = [
-      [{ enabled: false, error: "boom", port: null, loopbackVerified: false }, "disabled"],
       [{ error: "boom", port: null, loopbackVerified: false }, "error"],
       [{ port: null, loopbackVerified: false }, "server-not-running"],
       [{ loopbackVerified: false }, "loopback-unverified"],

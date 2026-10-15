@@ -1,8 +1,8 @@
 /**
  * Drives Zotero's preferences window for a plugin pane and reports what a user would see: whether the pane
- * loaded, the Fluent translation of each localized element, the pref-bound checkbox and the values the pane
- * script filled in. Also formats plugin FTL messages per locale through a fresh Localization, which shows
- * whether Zotero's plugin locale registration (plugins.js registerLocales) found locale/<lang>/ in the XPI.
+ * loaded, the Fluent translation of each localized element and the values the pane script filled in. Also formats
+ * plugin FTL messages per locale through a fresh Localization, which shows whether Zotero's plugin locale
+ * registration (plugins.js registerLocales) found locale/<lang>/ in the XPI.
  */
 import type { PaneElementState, PaneState, PrefsPaneRequest, PrefsPaneResult } from "../../seed-api.js";
 import { errorMessage, waitFor } from "./util.js";
@@ -44,7 +44,6 @@ function paneState(win: any, paneID: string): PaneState | null {
   if (!pane) return null;
   const container = pane.container as Element & { hidden: boolean };
   const byId = (id: string) => container.querySelector(`#${id}`) as any;
-  const checkbox = byId("zab-enabled");
   const status = byId("zab-status");
   const buttonsDisabled: Record<string, boolean> = {};
   for (const button of container.querySelectorAll("button[id]")) buttonsDisabled[button.id] = button.hasAttribute("disabled");
@@ -53,7 +52,6 @@ function paneState(win: any, paneID: string): PaneState | null {
     shown: !container.hidden,
     heading: container.querySelector("h1")?.textContent ?? null,
     elements: [...container.querySelectorAll("[data-l10n-id]")].map(elementState),
-    checkbox: checkbox ? { preference: checkbox.getAttribute("preference"), checked: !!checkbox.checked } : null,
     status: status ? { l10nId: status.getAttribute("data-l10n-id"), text: (status.textContent ?? "").trim() } : null,
     address: byId("zab-address")?.value ?? null,
     alias: byId("zab-alias")?.value ?? null,

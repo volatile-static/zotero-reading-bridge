@@ -16,7 +16,6 @@ export interface StatusResult {
     title: string;
     version: string;
     status: BridgeStatusKind;
-    enabled: boolean;
     /** The bridge never modifies Zotero data. */
     readOnly: true;
     endpoints: Array<{ path: string; url: string | null }>;
@@ -54,7 +53,6 @@ function buildStatus(state: BridgeState, ctx: ToolCallContext): StatusResult {
       title: BRIDGE_TITLE,
       version: state.version,
       status: state.status,
-      enabled: state.enabled,
       readOnly: true,
       endpoints: state.registeredPaths.map((path) => ({
         path,

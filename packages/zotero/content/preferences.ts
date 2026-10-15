@@ -4,8 +4,7 @@
  * Zotero evaluates it in a per-pane sandbox whose prototype is the preferences window, BEFORE inserting
  * preferences.xhtml, then dispatches a non-bubbling `load` event on each top-level element of the pane; a
  * capturing listener on the document receives it. Every listener is attached here because Zotero plans to
- * enforce a chrome CSP that blocks inline handlers. The enable checkbox is bound by Zotero itself through its
- * `preference` attribute.
+ * enforce a chrome CSP that blocks inline handlers.
  */
 import { ENDPOINT_ALIAS_PATH, ENDPOINT_PATH, endpointUrl } from "../../../shared/types/bridge.js";
 import { CLIENT_SERVER_NAMES } from "../../../shared/types/hook.js";
@@ -23,7 +22,6 @@ const COPIED_VISIBLE_MS = 2500;
 
 const STATUS_MESSAGE_IDS: Record<BridgeStatusKind, string> = {
   running: "zotero-ai-bridge-pref-status-running",
-  disabled: "zotero-ai-bridge-pref-status-disabled",
   "server-not-running": "zotero-ai-bridge-pref-status-server-not-running",
   "loopback-unverified": "zotero-ai-bridge-pref-status-loopback-unverified",
   error: "zotero-ai-bridge-pref-status-error",
@@ -40,7 +38,6 @@ function bridgeApi(): BridgePaneApi | undefined {
 
 class BridgePane {
   private state: BridgeState | undefined;
-  private unsubscribe: (() => void) | undefined;
   private copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly root: Element) {}
@@ -50,18 +47,10 @@ class BridgePane {
     this.onCommand("zab-copy-codex", () => this.withAddress(codexConfigToml));
     this.onCommand("zab-copy-claude", () => this.withAddress(claudeCodeAddCommand));
     this.onCommand("zab-copy-claude-hook", () => claudeCodeHookSettingsJson(CLIENT_SERVER_NAMES.claudeCodeManual));
-    // Zotero fires `showing` each time the pane is displayed and `unload` when the window closes.
-    this.root.addEventListener("showing", () => this.render(bridgeApi()?.getState()));
-    this.root.addEventListener("unload", () => this.destroy(), { once: true });
-    const api = bridgeApi();
-    this.unsubscribe = api?.subscribe((state) => this.render(state));
-    this.render(api?.getState());
-  }
-
-  private destroy(): void {
-    this.unsubscribe?.();
-    this.unsubscribe = undefined;
-    clearTimeout(this.copiedTimer);
+    // Zotero fires `unload` when the window closes.
+    this.root.addEventListener("unload", () => clearTimeout(this.copiedTimer), { once: true });
+    // Rendered once: the bridge state is fixed for as long as this pane exists (see BridgePaneApi).
+    this.render(bridgeApi()?.getState());
   }
 
   private element<T extends Element = Element>(id: string): T {

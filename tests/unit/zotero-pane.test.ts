@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { describe, it } from "node:test";
 
-import { PREF_ENABLED, ZOTERO_ADDON_ID } from "../../shared/types/bridge.js";
+import { ZOTERO_ADDON_ID } from "../../shared/types/bridge.js";
 
 const ZOTERO_DIR = new URL("../../packages/zotero/", import.meta.url);
 const LOCALES = ["en-US", "zh-CN"] as const;
@@ -48,10 +48,10 @@ describe("preferences pane localization", () => {
     }
   });
 
-  it("gives buttons and checkboxes a .label attribute", () => {
-    for (const m of markup.matchAll(/<(button|checkbox)\b[^>]*?\bdata-l10n-id="([^"]+)"/g)) {
+  it("gives buttons a .label attribute", () => {
+    for (const m of markup.matchAll(/<button\b[^>]*?\bdata-l10n-id="([^"]+)"/g)) {
       for (const [locale, messages] of ftl) {
-        assert.ok(messages.get(m[2] ?? "")?.has("label"), `${m[2]} (${m[1]}) lacks .label in ${locale}`);
+        assert.ok(messages.get(m[1] ?? "")?.has("label"), `${m[1]} lacks .label in ${locale}`);
       }
     }
   });
@@ -80,16 +80,12 @@ describe("preferences pane markup", () => {
     for (const id of used) assert.ok(declared.has(id), `#${id} is not in preferences.xhtml`);
   });
 
-  it("binds the enable checkbox to the plugin pref", () => {
-    assert.match(markup, new RegExp(`<checkbox\\b[^>]*\\bpreference="${PREF_ENABLED.replace(/[.-]/g, "\\$&")}"`));
-  });
-
   it("links the plugin's Fluent file", () => {
     assert.match(markup, /<html:link rel="localization" href="zotero-ai-bridge\.ftl"\/>/);
   });
 });
 
-describe("manifest.json and prefs.js", () => {
+describe("manifest.json", () => {
   const manifest = JSON.parse(read("manifest.json")) as {
     manifest_version: number;
     icons: Record<string, string>;
@@ -109,9 +105,5 @@ describe("manifest.json and prefs.js", () => {
   it("points every icon at an existing file", () => {
     assert.ok(Object.keys(manifest.icons).length > 0);
     for (const icon of Object.values(manifest.icons)) assert.ok(fs.existsSync(new URL(icon, ZOTERO_DIR)), icon);
-  });
-
-  it("defaults the enable pref to true", () => {
-    assert.match(read("prefs.js"), new RegExp(`^pref\\("${PREF_ENABLED.replace(/[.-]/g, "\\$&")}", true\\);$`, "m"));
   });
 });

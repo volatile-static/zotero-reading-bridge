@@ -34,7 +34,8 @@ function loadMain(rootURI: string): ZoteroAIBridgeMainApi {
 async function startup({ id, version, rootURI }: BootstrapData, reason: number): Promise<void> {
   // Zotero can call startup again without a shutdown in between (plugins.js onOperationCancelled after an
   // uninstall + reinstall in one session). loadMain() evaluates a fresh bundle whose runtime cannot see the old
-  // one, so stop the previous runtime here, or its pref observer could re-register endpoints after a disable.
+  // one, so stop the previous runtime here, or its endpoints (kept whenever the new runtime does not serve),
+  // Notifier observer, response-code patch and preferences pane would outlive every later disable.
   const previous = globalThis.ZoteroAIBridgeMain;
   if (previous) {
     delete globalThis.ZoteroAIBridgeMain;

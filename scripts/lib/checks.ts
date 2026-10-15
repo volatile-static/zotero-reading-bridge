@@ -7,7 +7,6 @@ import {
   DEFAULT_ZOTERO_PORT,
   ENDPOINT_PATH,
   ENDPOINT_PATHS,
-  PREF_ENABLED,
   ZOTERO_ADDON_ID,
   endpointUrl,
 } from "../../shared/types/bridge.js";
@@ -251,8 +250,9 @@ export function bundleContractProblems(bootstrapCode: string, bridgeCode: string
  * plugins.js can call startup() twice without a shutdown in between (onOperationCancelled after an uninstall and
  * reinstall in one session). Every startup re-evaluates content/bridge.js, whose fresh closure cannot reach the
  * earlier runtime, so bootstrap.js itself must shut the previous ZoteroAIBridgeMain down before loading the bundle
- * again; otherwise that runtime's pref observer survives a later disable. Checked with a script loader stub that
- * publishes a recording ZoteroAIBridgeMain on every load; startup() runs synchronously up to its first await.
+ * again; otherwise that runtime's endpoints (whenever the new runtime does not serve), Notifier observer,
+ * response-code patch and pane are never released, not even by a later disable. Checked with a script loader stub
+ * that publishes a recording ZoteroAIBridgeMain on every load; startup() runs synchronously up to its first await.
  */
 export function restartProblems(bootstrapCode: string): string[] {
   const events: string[] = [];
@@ -358,7 +358,6 @@ export function endpointInitProblems(code: string): string[] {
 }
 
 export function xpiPackageChecks(files: FileMap, version: string): CheckResult[] {
-  const prefRe = new RegExp(`\\bpref\\(\\s*["']${PREF_ENABLED.replace(/[.-]/g, "\\$&")}["']\\s*,\\s*true\\s*\\)`);
   return [
     runCheck("required files present", () => XPI_REQUIRED_FILES.filter((f) => !files.has(f)).map((f) => `missing ${f}`)),
     runCheck("manifest.json fields", () => zoteroManifestProblems(readJsonObject(files, "manifest.json"), version)),
@@ -377,9 +376,6 @@ export function xpiPackageChecks(files: FileMap, version: string): CheckResult[]
     runCheck("content/bridge.js endpoint init() declares one parameter", () => endpointInitProblems(readText(files, "content/bridge.js"))),
     runCheck("resource references resolve inside the XPI", () => xpiReferenceProblems(files)),
     runCheck("Fluent ids prefixed and identical across locales", () => ftlProblems(files)),
-    runCheck(`prefs.js defaults ${PREF_ENABLED} to true`, () =>
-      prefRe.test(readText(files, "prefs.js")) ? [] : [`prefs.js lacks pref("${PREF_ENABLED}", true)`],
-    ),
   ];
 }
 

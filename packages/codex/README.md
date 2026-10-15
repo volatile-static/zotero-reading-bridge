@@ -15,7 +15,7 @@
 
 ## 前提
 
-1. Zotero 11 已安装 Zotero AI Bridge 插件（`zotero-ai-bridge.xpi`），并在 Zotero 设置的「Zotero AI Bridge」页面中启用。
+1. Zotero 11 已安装并启用 Zotero AI Bridge 插件（`zotero-ai-bridge.xpi`），Zotero 设置的「Zotero AI Bridge」页面状态为“运行中”。
 2. Codex CLI 或 Codex 桌面版（IDE 扩展不支持插件）。插件的识别与安装在 codex-cli 0.162.0-alpha.17.2 上验证过，更早的版本未测试。
 3. **先启动 Zotero，再开始 Codex 会话。** Codex 的 Hook 不会等待或重连 MCP 服务器；会话开始时 Zotero 未运行，
    这个会话里 `zotero_bridge` 就一直不可用，需要新开会话。

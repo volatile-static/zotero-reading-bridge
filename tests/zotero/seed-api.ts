@@ -30,11 +30,8 @@ export const SEED_PATHS = {
   quit: "/zab-test/quit",
 } as const;
 
-/**
- * The only prefs /zab-test/pref may change: the bridge's switch and Zotero's "Show Items from Subcollections"
- * view option (the collection tools follow it).
- */
-export const SEED_WRITABLE_PREFS = ["extensions.zotero-ai-bridge.enabled", "extensions.zotero.recursiveCollections"] as const;
+/** The only pref /zab-test/pref may change: Zotero's "Show Items from Subcollections" (collection tools follow it). */
+export const SEED_WRITABLE_PREFS = ["extensions.zotero.recursiveCollections"] as const;
 
 /** Add or remove one tag on a fixture item (saved like a user edit), to prove caches see library changes. */
 export interface TagRequest {
@@ -226,7 +223,6 @@ export interface PrefResult {
   ok: true;
   name: string;
   value: boolean | string | number | null;
-  endpoints: string[];
 }
 
 export interface AddonRequest {
@@ -243,11 +239,11 @@ export interface AddonResult {
 
 /**
  * Preferences window driver: "open" opens Zotero's preferences at the plugin's pane and waits until the pane
- * is loaded, shown and its status line translated; "report" reads it again; "close" closes the window.
+ * is loaded, shown and its status line translated; "close" closes the window.
  * `messages` are formatted per locale through a fresh Fluent Localization (value-only message ids).
  */
 export interface PrefsPaneRequest {
-  action: "open" | "report" | "close";
+  action: "open" | "close";
   pluginID: string;
   messages?: { locales: string[]; ids: string[] };
 }
@@ -258,7 +254,7 @@ export interface PaneElementState {
   l10nId: string;
   /** Trimmed text content (Fluent message value). */
   text: string;
-  /** Fluent `.label` attribute target (checkbox, button). */
+  /** Fluent `.label` attribute target (button). */
   label: string | null;
 }
 
@@ -268,7 +264,6 @@ export interface PaneState {
   /** The h1 Zotero prepends with the pane's label. */
   heading: string | null;
   elements: PaneElementState[];
-  checkbox: { preference: string | null; checked: boolean } | null;
   status: { l10nId: string | null; text: string } | null;
   address: string | null;
   alias: string | null;

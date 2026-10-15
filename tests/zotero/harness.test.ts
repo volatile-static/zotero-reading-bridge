@@ -288,6 +288,6 @@ describe("case catalogue", () => {
     const order = (prefix: string) => ids.findIndex((id) => id.startsWith(prefix));
     assert.ok(order("seed.fixtures") < order("ui."), "seeding precedes UI cases");
     assert.ok(order("lifecycle.read-only") > order("context."), "read-only proof runs after the context cases");
-    assert.equal(ids.at(-1)?.startsWith("lifecycle."), true, "lifecycle toggles run last");
+    assert.equal(ids.at(-1)?.startsWith("lifecycle."), true, "lifecycle cases run last");
   });
 });

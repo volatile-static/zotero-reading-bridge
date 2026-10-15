@@ -683,7 +683,7 @@ const BOOTSTRAP_OK = [
 const BRIDGE_OK = [
   "(() => {",
   '  const l10n = new Localization(["zotero-ai-bridge.ftl"]);',
-  "  const prefs = Zotero.Prefs.get('extensions.zotero-ai-bridge.enabled');",
+  "  const port = Zotero.Server.port;",
   "  const pane = (root) => ({ src: `${root}content/preferences.xhtml`, image: `${root}content/icons/icon.svg` });",
   "  function registerEndpoints() {",
   "    class Endpoint {",
@@ -695,7 +695,7 @@ const BRIDGE_OK = [
   "    }",
   '    Zotero.Server.Endpoints["/bridge/mcp"] = Endpoint;',
   "  }",
-  `  globalThis.${MAIN_GLOBAL_NAME} = { startup() { registerEndpoints(); return [l10n, prefs, pane("")]; }, shutdown() {} };`,
+  `  globalThis.${MAIN_GLOBAL_NAME} = { startup() { registerEndpoints(); return [l10n, port, pane("")]; }, shutdown() {} };`,
   "})();",
 ].join("\n");
 
@@ -716,7 +716,6 @@ function xpiFiles(overrides: Record<string, string | object> = {}): FileMap {
       },
     },
     "bootstrap.js": BOOTSTRAP_OK,
-    "prefs.js": 'pref("extensions.zotero-ai-bridge.enabled", true);\n',
     "content/bridge.js": BRIDGE_OK,
     "content/preferences.js": "(() => { window.addEventListener('load', () => {}); })();\n",
     "content/preferences.xhtml":
@@ -772,7 +771,7 @@ describe("XPI checks", () => {
 
   it("require startup() to stop a runtime that was never shut down before loading the bundle again", () => {
     assert.deepEqual(restartProblems(BOOTSTRAP_OK), []);
-    // The pre-fix bootstrap: a second startup leaves the first runtime (and its pref observer) running.
+    // The pre-fix bootstrap: a second startup leaves the first runtime (and its observers) running.
     const unguarded = BOOTSTRAP_OK.replace(
       `    if (previous) { delete globalThis.${MAIN_GLOBAL_NAME}; previous.shutdown(reason); }\n`,
       "",

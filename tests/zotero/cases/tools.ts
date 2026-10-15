@@ -69,7 +69,19 @@ export const toolCases: TestCase[] = [
       const status = await ctx.mcp().tool("get_status");
       assert.equal(status.bridge.name, "zotero-ai-bridge");
       assert.equal(status.bridge.status, "running");
-      assert.equal(status.bridge.enabled, true);
+      // No "enabled" field: the bridge has no switch of its own (disabling the plugin removes the endpoint).
+      assert.deepEqual(Object.keys(status.bridge).sort(), [
+        "endpoints",
+        "loopbackVerified",
+        "name",
+        "protocolVersion",
+        "protocolVersions",
+        "readOnly",
+        "requestPath",
+        "status",
+        "title",
+        "version",
+      ]);
       assert.equal(status.bridge.readOnly, true);
       assert.equal(status.bridge.loopbackVerified, true);
       assert.deepEqual(status.bridge.protocolVersions, [...SUPPORTED_PROTOCOL_VERSIONS]);

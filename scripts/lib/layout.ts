@@ -18,9 +18,8 @@ export const TYPECHECK_PROJECTS = [
 export const TSC_ENTRY = "node_modules/typescript/bin/tsc";
 
 export const ZOTERO_SOURCE_DIR = "packages/zotero";
+/** Copied into the XPI root with the package version injected. */
 export const ZOTERO_MANIFEST = "manifest.json";
-/** Copied into the XPI root as-is (manifest.json gets the package version injected). */
-export const ZOTERO_COPY_FILES = [ZOTERO_MANIFEST, "prefs.js"] as const;
 /** Copied recursively, minus TypeScript sources and tsconfig files. */
 export const ZOTERO_COPY_DIRS = ["content", "locale"] as const;
 
@@ -68,7 +67,6 @@ export const ENDPOINT_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as con
 export const XPI_REQUIRED_FILES = [
   "manifest.json",
   "bootstrap.js",
-  "prefs.js",
   "content/bridge.js",
   "content/preferences.js",
   "content/preferences.xhtml",

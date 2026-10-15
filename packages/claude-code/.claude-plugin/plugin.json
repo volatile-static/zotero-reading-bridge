@@ -1,0 +1,8 @@
+{
+  "name": "zotero-ai-bridge",
+  "version": "0.1.0",
+  "description": "Read-only access to your local Zotero library and the current Zotero selection, attached to every prompt.",
+  "author": { "name": "Zotero AI Bridge contributors" },
+  "license": "MIT",
+  "keywords": ["zotero", "research", "citations", "pdf", "mcp"]
+}

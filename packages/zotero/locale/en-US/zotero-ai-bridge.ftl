@@ -1,0 +1,35 @@
+# Zotero AI Bridge preferences pane. Zotero 11 merges all plugin FTL files into one namespace,
+# so every message ID starts with "zotero-ai-bridge-".
+
+zotero-ai-bridge-pref-endpoint-heading = Local MCP Endpoint
+zotero-ai-bridge-pref-enabled =
+    .label = Serve the read-only MCP endpoint for AI clients
+zotero-ai-bridge-pref-status-label = Status:
+# $port (String) - port of Zotero's HTTP server
+zotero-ai-bridge-pref-status-running = Running on 127.0.0.1:{ $port }
+zotero-ai-bridge-pref-status-disabled = Off. The endpoint is not registered, so AI clients cannot connect.
+zotero-ai-bridge-pref-status-server-not-running = Zotero's local HTTP server is not running, so the endpoint cannot be served. Make sure the server is enabled and its port is not used by another program, then restart Zotero.
+zotero-ai-bridge-pref-status-loopback-unverified = Not started: could not verify that Zotero's HTTP server only accepts connections from this computer (127.0.0.1).
+# $error (String) - English error description from the plugin
+zotero-ai-bridge-pref-status-error = Error: { $error }
+zotero-ai-bridge-pref-status-unavailable = The plugin is not running. Reopen this window after enabling Zotero AI Bridge.
+zotero-ai-bridge-pref-address-label = Address:
+zotero-ai-bridge-pref-alias-label = Alias (same endpoint):
+zotero-ai-bridge-pref-copy-address =
+    .label = Copy Address
+zotero-ai-bridge-pref-port-note = The address always shows the port Zotero is actually using. Changing Zotero's HTTP server port requires restarting Zotero and updating client configurations.
+
+zotero-ai-bridge-pref-clients-heading = Connect AI Clients
+zotero-ai-bridge-pref-codex-description = Codex: the Zotero AI Bridge plugin for Codex already includes this server and its prompt hook. Use either the plugin or manual configuration, not both. For manual configuration, add the copied configuration (server and optional hook) to ~/.codex/config.toml.
+zotero-ai-bridge-pref-copy-codex =
+    .label = Copy Codex Configuration
+zotero-ai-bridge-pref-claude-description = Claude Code: the Zotero AI Bridge plugin for Claude Code already includes this server and its prompt hook. Use either the plugin or manual registration, not both. For manual registration, run the command and add the hook settings to Claude Code's settings.json.
+zotero-ai-bridge-pref-copy-claude =
+    .label = Copy Claude Code Command
+zotero-ai-bridge-pref-copy-claude-hook =
+    .label = Copy Hook Settings
+zotero-ai-bridge-pref-copied = Copied to the clipboard.
+
+zotero-ai-bridge-pref-security-heading = Security
+zotero-ai-bridge-pref-security-note = The endpoint only listens on this computer (127.0.0.1) and is read-only: it never changes your library. It has no password, so while it is on, any program running on this computer can read your Zotero library, notes and attachment file paths. AI clients cannot verify that they are talking to Zotero either: while Zotero is not running, another program or user on this computer can take its port and feed instructions into every message through the client hooks. On a shared computer, do not install the Codex or Claude Code client plugins.
+zotero-ai-bridge-pref-debug-note = When Zotero's debug output logging is on, Zotero itself records incoming requests and, while tools run, the paths and file names of attachments, database query values (such as item URLs and search terms) and full-text search terms. Turn debug output off while using AI clients, and review or redact debug output before submitting it.

@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "name": "Zotero AI Bridge test seed",
+  "version": "0.1.0",
+  "description": "TEST ONLY. Seeds fixture data and drives the UI for the Zotero AI Bridge live harness. Never install into a real profile.",
+  "applications": {
+    "zotero": {
+      "id": "zab-test-seed@zotero-ai-bridge.local",
+      "update_url": "https://zotero-ai-bridge.invalid/test-seed-update.json",
+      "strict_min_version": "10.999",
+      "strict_max_version": "11.*"
+    }
+  }
+}

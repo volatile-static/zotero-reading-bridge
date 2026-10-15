@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zotero-ai-bridge.invalid/contracts/context-snapshot.schema.json",
+  "title": "Zotero AI Bridge context snapshot",
+  "description": "Live Zotero UI state captured at one instant (get_current_context result; JSON inside <zotero_snapshot> of the capture_prompt_context hook output). Twin of shared/types/snapshot.ts ContextSnapshot; tests/unit/snapshot-schema.test.ts keeps them in sync.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "client": { "type": ["string", "null"] },
+    "sessionId": { "type": ["string", "null"] },
+    "turnId": { "type": ["string", "null"], "description": "Codex turn id." },
+    "promptId": { "type": ["string", "null"], "description": "Claude Code prompt id; null when absent or empty." },
+    "sequence": { "type": "integer", "minimum": 1, "description": "Process-local, strictly increasing capture counter." },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["ok", "empty", "unavailable"] },
+    "unavailableReason": { "type": ["string", "null"] },
+    "focus": {
+      "enum": ["reader", "note", "library", "none"],
+      "description": "A focused separate reader or note window, else the reader or note in the active tab, else the library selection while the library tab is in front."
+    },
+    "activeTab": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["library", "reader", "note", "other", "none"] },
+        "title": { "type": ["string", "null"] }
+      },
+      "required": ["type", "title"],
+      "additionalProperties": false
+    },
+    "libraryView": { "anyOf": [{ "$ref": "#/$defs/LibraryViewContext" }, { "type": "null" }] },
+    "reader": { "anyOf": [{ "$ref": "#/$defs/ReaderContext" }, { "type": "null" }] },
+    "note": { "anyOf": [{ "$ref": "#/$defs/NoteContext" }, { "type": "null" }] },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "client",
+    "sessionId",
+    "turnId",
+    "promptId",
+    "sequence",
+    "capturedAt",
+    "status",
+    "unavailableReason",
+    "focus",
+    "activeTab",
+    "libraryView",
+    "reader",
+    "note",
+    "warnings"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "LibraryRef": {
+      "type": "object",
+      "properties": {
+        "libraryID": { "type": "integer" },
+        "type": { "enum": ["user", "group", "feed"] },
+        "name": { "type": "string" },
+        "groupID": { "type": "integer", "description": "Present for group libraries." }
+      },
+      "required": ["libraryID", "type", "name"],
+      "additionalProperties": false
+    },
+    "CollectionRef": {
+      "type": "object",
+      "properties": {
+        "libraryID": { "type": "integer" },
+        "key": { "type": "string" },
+        "collectionID": { "type": "integer" },
+        "name": { "type": "string" },
+        "parentKey": { "type": ["string", "null"] }
+      },
+      "required": ["libraryID", "key", "collectionID", "name", "parentKey"],
+      "additionalProperties": false
+    },
+    "SavedSearchRef": {
+      "type": "object",
+      "properties": {
+        "libraryID": { "type": "integer" },
+        "key": { "type": "string" },
+        "searchID": { "type": "integer" },
+        "name": { "type": "string" }
+      },
+      "required": ["libraryID", "key", "searchID", "name"],
+      "additionalProperties": false
+    },
+    "ItemRef": {
+      "type": "object",
+      "properties": {
+        "libraryID": { "type": "integer" },
+        "key": { "type": "string" },
+        "itemID": { "type": "integer" },
+        "itemType": { "type": "string" },
+        "title": { "type": "string" }
+      },
+      "required": ["libraryID", "key", "itemID", "itemType", "title"],
+      "additionalProperties": false
+    },
+    "ReaderAttachment": {
+      "description": "ItemRef of the open attachment plus its MIME type.",
+      "type": "object",
+      "properties": {
+        "libraryID": { "type": "integer" },
+        "key": { "type": "string" },
+        "itemID": { "type": "integer" },
+        "itemType": { "type": "string" },
+        "title": { "type": "string" },
+        "contentType": { "type": ["string", "null"] }
+      },
+      "required": ["libraryID", "key", "itemID", "itemType", "title", "contentType"],
+      "additionalProperties": false
+    },
+    "AnnotationRef": {
+      "type": "object",
+      "properties": {
+        "libraryID": { "type": "integer" },
+        "key": { "type": "string" },
+        "annotationType": { "type": "string" },
+        "text": { "type": ["string", "null"] },
+        "comment": { "type": ["string", "null"] },
+        "color": { "type": ["string", "null"] },
+        "pageLabel": { "type": ["string", "null"] }
+      },
+      "required": ["libraryID", "key", "annotationType", "text", "comment", "color", "pageLabel"],
+      "additionalProperties": false
+    },
+    "TruncatedText": {
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "length": { "type": "integer", "minimum": 0, "description": "Length of the original text before truncation." },
+        "truncated": { "type": "boolean" }
+      },
+      "required": ["text", "length", "truncated"],
+      "additionalProperties": false
+    },
+    "SnapshotItems": {
+      "type": "object",
+      "properties": {
+        "count": { "type": "integer", "minimum": 0, "description": "Exact number of selected items." },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/ItemRef" } },
+        "truncated": { "type": "boolean" }
+      },
+      "required": ["count", "items", "truncated"],
+      "additionalProperties": false
+    },
+    "SnapshotAnnotations": {
+      "type": "object",
+      "properties": {
+        "count": { "type": "integer", "minimum": 0 },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/AnnotationRef" } },
+        "truncated": { "type": "boolean" }
+      },
+      "required": ["count", "items", "truncated"],
+      "additionalProperties": false
+    },
+    "LibraryViewContext": {
+      "type": "object",
+      "properties": {
+        "libraries": { "type": "array", "items": { "$ref": "#/$defs/LibraryRef" } },
+        "collections": { "type": "array", "items": { "$ref": "#/$defs/CollectionRef" } },
+        "savedSearches": { "type": "array", "items": { "$ref": "#/$defs/SavedSearchRef" } },
+        "otherRows": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Other selected tree rows by kind, e.g. 'trash:1', 'unfiled:1', 'feed:3'."
+        },
+        "selectedItems": { "$ref": "#/$defs/SnapshotItems" }
+      },
+      "required": ["libraries", "collections", "savedSearches", "otherRows", "selectedItems"],
+      "additionalProperties": false
+    },
+    "ReaderPage": {
+      "type": "object",
+      "properties": {
+        "index": { "type": ["integer", "null"], "description": "0-based page index." },
+        "label": { "type": ["string", "null"] },
+        "count": { "type": ["integer", "null"] }
+      },
+      "required": ["index", "label", "count"],
+      "additionalProperties": false
+    },
+    "ReaderContext": {
+      "type": "object",
+      "properties": {
+        "readerType": { "type": "string", "description": "pdf | epub | snapshot (or another reader type reported by Zotero)." },
+        "location": { "enum": ["tab", "window"] },
+        "attachment": { "$ref": "#/$defs/ReaderAttachment" },
+        "parentItem": { "anyOf": [{ "$ref": "#/$defs/ItemRef" }, { "type": "null" }] },
+        "page": { "anyOf": [{ "$ref": "#/$defs/ReaderPage" }, { "type": "null" }] },
+        "selectedText": { "anyOf": [{ "$ref": "#/$defs/TruncatedText" }, { "type": "null" }] },
+        "selectedAnnotations": { "$ref": "#/$defs/SnapshotAnnotations" }
+      },
+      "required": ["readerType", "location", "attachment", "parentItem", "page", "selectedText", "selectedAnnotations"],
+      "additionalProperties": false
+    },
+    "NoteContext": {
+      "description": "A note open in a main-window note tab or in a separate note window.",
+      "type": "object",
+      "properties": {
+        "location": { "enum": ["tab", "window"] },
+        "item": { "$ref": "#/$defs/ItemRef" },
+        "parentItem": { "anyOf": [{ "$ref": "#/$defs/ItemRef" }, { "type": "null" }], "description": "Parent item of a child note; null for a standalone note." }
+      },
+      "required": ["location", "item", "parentItem"],
+      "additionalProperties": false
+    }
+  }
+}

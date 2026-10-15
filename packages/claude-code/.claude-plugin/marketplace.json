@@ -1,0 +1,15 @@
+{
+  "name": "zotero-ai-bridge-local",
+  "owner": { "name": "Zotero AI Bridge contributors" },
+  "metadata": {
+    "description": "Local single-plugin marketplace for Zotero AI Bridge"
+  },
+  "plugins": [
+    {
+      "name": "zotero-ai-bridge",
+      "source": "./",
+      "description": "Read-only access to your local Zotero library and the current Zotero selection, attached to every prompt.",
+      "version": "0.1.0"
+    }
+  ]
+}

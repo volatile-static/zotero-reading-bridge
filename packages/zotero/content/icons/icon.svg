@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Zotero AI Bridge</title>
+  <rect width="64" height="64" rx="14" fill="#2F5D62"/>
+  <path d="M14 20c6-2 12-2 18 2v24c-6-4-12-4-18-2z" fill="#F4F1EA"/>
+  <path d="M50 20c-6-2-12-2-18 2v24c6-4 12-4 18-2z" fill="#DCE8E4"/>
+  <path d="M10 50c8-7 36-7 44 0" fill="none" stroke="#F4F1EA" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "zotero_bridge": {
+      "type": "http",
+      "url": "http://127.0.0.1:23119/bridge/mcp",
+      "startup_timeout_sec": 10,
+      "tool_timeout_sec": 30
+    }
+  }
+}

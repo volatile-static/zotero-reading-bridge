@@ -1,0 +1,12 @@
+{
+  "name": "zotero-ai-bridge-local",
+  "interface": { "displayName": "Zotero AI Bridge (local)" },
+  "plugins": [
+    {
+      "name": "zotero-ai-bridge",
+      "source": { "source": "local", "path": "./" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

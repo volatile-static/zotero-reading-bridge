@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "types": ["zotero-types/entries/sandbox"]
+  },
+  "include": ["bootstrap.ts", "src/**/*.ts", "src/**/*.d.ts", "../../shared/types/**/*.ts"]
+}

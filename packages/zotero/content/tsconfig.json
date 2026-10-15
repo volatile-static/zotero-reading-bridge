@@ -1,0 +1,8 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "types": ["zotero-types/entries/xhtml"]
+  },
+  "include": ["preferences.ts", "../src/settings/client-config.ts", "../../../shared/types/**/*.ts"]
+}

@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": ["unit/**/*.ts", "protocol/**/*.ts", "zotero/**/*.ts", "clients/**/*.ts", "fixtures/**/*.ts", "../shared/**/*.ts"],
+  "exclude": ["zotero/seed-plugin/**"]
+}

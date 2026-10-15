@@ -1,0 +1,22 @@
+# Dependencies and build output
+node_modules/
+work/
+outputs/
+*.tsbuildinfo
+
+# Local machine configuration and credentials (never commit)
+.env
+.env.*
+*.local.json
+*.local.*
+/.mcp.json
+.claude/settings.local.json
+.codex/
+auth.json
+.credentials.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

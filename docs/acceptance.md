@@ -14,7 +14,6 @@
 | `自动化测试覆盖（待集成后填写结果）` | 由仓库中的自动化测试或脚本检查（命令写在“检查项”中）。集成时运行命令，把状态改为 `通过` / `失败`，并在“证据”中写明命令、通过数量和日期。 |
 | `已验证（临时配置）` | 用真实客户端程序执行过，但 `HOME`、`USERPROFILE`、`CODEX_HOME`、`CLAUDE_CONFIG_DIR` 全部指向临时目录，只证明客户端能识别插件结构，不代表真实环境中的完整流程。 |
 | `已验证（静态检查）` | 通过阅读程序、校验器或代码扫描确认，没有运行完整功能。 |
-| `未验证 / 静态分析判定不兼容` | 只用于 Claude Science：静态分析认为当前版本无法连接，尚未做真实连接。 |
 | `通过` / `失败` | 真实执行后的结论。失败时在“证据”中写明现象，并在 issue 或 [troubleshooting.md](troubleshooting.md) 中补充。 |
 
 填写规则：
@@ -34,7 +33,7 @@
 | Node.js 版本 | 24.15.0 |
 | Codex CLI / 桌面版版本 | codex-cli 0.162.0-alpha.17.2（仅临时配置验证） |
 | Claude Code 版本 | 2.1.295（仅临时配置验证） |
-| Claude Science 版本 | 0.1.62（仅静态分析） |
+| Claude Science 版本 | 0.1.63（真实添加连接器，见 G-4；0.1.62 时只做过静态分析） |
 
 ## 1. 构建与类型检查
 
@@ -208,7 +207,7 @@ Z-3（设置页启用开关）随开关一起删除，编号不再使用；关�
 | G-1 | 通用 MCP 客户端（官方 TypeScript SDK，无 Hook）完成 initialize、tools/list（18 个工具）、tools/call（`tests/protocol/sdk-client.test.ts`） | 通过 | Node.js 24.15.0，@modelcontextprotocol/sdk 1.32.1 | Windows 11，开发机，仓库源码（Node 测试，不启动 Zotero） | 2026-10-15 | `tests/protocol/sdk-client.test.ts` 38 通过 / 0 失败。 |
 | G-2 | 用 PowerShell 原始 JSON-RPC 请求（[generic-no-hook](../tests/clients/generic-no-hook/README.md) 第 1 节）对真实 Zotero 完成 initialize、tools/list、`get_current_context` | 通过 | PowerShell 7.6.6 与 Windows PowerShell 5.1.26100；Zotero 11.0-beta.1+b0db83d9d（Gecko 153.3.0） | Windows 11，开发机，独立测试实例（临时配置文件与数据目录 `work/zotero-test/<运行>/`，端口 23139） | 2026-10-15 | T0（运行 20261015-103117-8c0161，证据 `work/zotero-test/20261015-103117-8c0161/logs/zotero-stdout.log`，手动运行没有 report.json）：第 1 节的命令原样执行（只把 `$uri` 的端口改为 23139），选中一个中文标题的夹具条目后：两个 PowerShell 版本都得到 protocolVersion 2025-11-25、serverInfo.name zotero-ai-bridge；通知无输出；tools/list 18 个工具名；`get_current_context` 为 status ok、focus library，返回所选条目的 libraryID + key，中文标题完整（响应不带 charset，Windows PowerShell 5.1 也能正确得到中文，因为外层 JSON 已全部转义为 \uXXXX 而不受影响）。 |
 | G-3 | 一个真实的无 Hook MCP 客户端（例如手动注册、不加 Hook 的 Claude Code）连接并列出 18 个工具 | 已验证（临时配置） | Claude Code 2.1.295；codex-cli 0.162.0-alpha.17.2；Zotero 11.0-beta.1+b0db83d9d（Gecko 153.3.0） | Windows 11，开发机，独立测试实例（临时配置文件与数据目录 `work/zotero-test/<运行>/`，端口 23139）；客户端使用临时 `HOME` / `USERPROFILE` / `CLAUDE_CONFIG_DIR` / `CODEX_HOME` | 2026-10-15 | T0（运行 20261015-103117-8c0161，证据 `work/zotero-test/20261015-103117-8c0161/logs/zotero-stdout.log` 中 `user-agent: claude-code/2.1.295` 与 `codex-mcp-client/0.162.0-alpha.17.2` 的请求，手动运行没有 report.json）。Claude Code：`claude mcp add --transport http --scope user zotero http://127.0.0.1:23139/bridge/mcp`（当时的手动注册名；现在的说明使用 `zotero_bridge`）后 `claude mcp list` 与 `claude mcp get zotero` 均为「✔ Connected」；Zotero 调试输出显示其请求序列为 `server/discover` 探测（400）→ initialize 2025-11-25 → 通知 202 → GET 405 → tools/list 200。Codex：`codex app-server` 的 `mcpServerStatus/list`（配置同 `examples/codex-config.toml.example` 的服务器段，端口 23139）返回 serverInfo zotero-ai-bridge 0.1.0、18 个工具、toolsError 为 null；其请求序列为 GET 405 与若干 OAuth 发现请求（Zotero 404）→ initialize 2025-06-18 → 202 → tools/list 200。这证明两个客户端的 HTTP 实现（Bun、reqwest）能与 Zotero 的 HTTP/1.0 响应配合；会话中 `/mcp` 的显示仍属 I-C5 / I-K4。真实 `~/.claude.json`、`~/.claude/settings.json`、`~/.codex/config.toml` 前后 SHA-256 相同。 |
-| G-4 | Claude Science：添加 `http://127.0.0.1:23119/bridge/mcp` 连接器 | 未验证 / 静态分析判定不兼容 | Claude Science 0.1.62 | Windows 11，开发机（只做静态分析） | 2026-10-14 | 程序中 `safeFetch: https-only` 与 `safeFetch: non-public host rejected` 两个拒绝分支；启动日志曾记录 `[proxy] denied 127.0.0.1:23119 (blocked-port)`。详见 [integrations/claude-science/README.md](../integrations/claude-science/README.md)。 |
+| G-4 | Claude Science：添加 `http://127.0.0.1:23119/bridge/mcp` 连接器 | 失败 | Claude Science 0.1.63 | Windows 11，开发机，真实安装 | 2026-10-16 | Settings > Connectors > Add connector > Remote，URL 填 `http://127.0.0.1:23119/bridge/mcp`，传输 Streamable HTTP，不填凭据，点 Add 后表单报错：“safeFetch: https-only (got http://) — http://127.0.0.1:23119/bridge/mcp. Remote MCP servers must be reachable at a public https URL.”，并建议改用本地 stdio 服务器或 https 隧道（两者都不在本方案范围内，见 [connect-claude-science.md](connect-claude-science.md) 第 2 节）。连接器未被添加，后续的回环可达性、Origin / User-Agent、JSON-only 三项因此无法检查。2026-10-14 对 0.1.62 的静态分析：程序中 `safeFetch: https-only` 与 `safeFetch: non-public host rejected` 两个拒绝分支；启动日志曾记录 `[proxy] denied 127.0.0.1:23119 (blocked-port)`。详见 [integrations/claude-science/README.md](../integrations/claude-science/README.md)。 |
 
 ## 14. 无 Hook 工作流
 
@@ -218,7 +217,7 @@ Z-3（设置页启用开关）随开关一起删除，编号不再使用；关�
 | W-2 | 下一条消息前在 Zotero 中改选，用户再说“这篇呢” → 模型重新调用 `get_current_context`，不复用旧结果 | 未验证 | | | | |
 | W-3 | 什么都没选中（`status: "empty"`）→ 模型请用户选中或按标题搜索；Zotero 未运行 → 模型说明并建议 `get_status`，不猜测 | 未验证 | | | | |
 | W-4 | 模型不调用 `capture_prompt_context` | 未验证 | | | | |
-| W-5 | Claude Science 中的无 Hook 工作流 | 未验证 / 静态分析判定不兼容 | Claude Science 0.1.62 | — | 2026-10-14 | 连接器无法添加（见 G-4）。 |
+| W-5 | Claude Science 中的无 Hook 工作流 | 未验证 | Claude Science 0.1.63 | — | 2026-10-16 | 无法执行：连接器添加失败（见 G-4）。 |
 
 ## 15. 无 Hook PDF 阅读
 
@@ -226,7 +225,7 @@ Z-3（设置页启用开关）随开关一起删除，编号不再使用；关�
 |---|---|---|---|---|---|---|
 | N-1 | 通用客户端：`get_attachment_path` 取得路径后，用客户端自己的文件工具读取 PDF 并回答 | 未验证 | | | | |
 | N-2 | 附件文件缺失时，模型根据 `exists: false` 和 `note` 如实说明，不编造内容 | 未验证 | | | | |
-| N-3 | Claude Science 中读取 PDF | 未验证 / 静态分析判定不兼容 | Claude Science 0.1.62 | — | 2026-10-14 | 连接器无法添加（见 G-4）；沙箱是否能读取本地文件也未知。 |
+| N-3 | Claude Science 中读取 PDF | 未验证 | Claude Science 0.1.63 | — | 2026-10-16 | 无法执行：连接器添加失败（见 G-4）；沙箱是否能读取本地文件也未知。 |
 
 ## 16. 只读
 

@@ -91,7 +91,7 @@ claude plugin enable zotero-ai-bridge@zotero-ai-bridge-local   # 如果第 1 步
 
 ## 3. Claude Science（G-4、W-5、N-3）
 
-当前状态为“未验证 / 静态分析判定不兼容”（原因见 [integrations/claude-science/README.md](../../../integrations/claude-science/README.md)）。
+当前状态为“不兼容”（0.1.63 实测，G-4）（原因见 [integrations/claude-science/README.md](../../../integrations/claude-science/README.md)）。
 Claude Science 更新后，按该文件“如何复测”一节逐步操作：
 
 - 连接器被拒绝：在 G-4 的“证据”中记录完整的错误文字与版本，状态保持不变，W-5、N-3 不再执行。

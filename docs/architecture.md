@@ -202,7 +202,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 14. **清单**：`manifest_version: 2`，`applications.zotero.id = zotero-ai-bridge@zotero-ai-bridge.local`，`strict_min_version: 10.999`
     （让 11.0 beta 也能安装）、`strict_max_version: 11.*`；`update_url` 是 Zotero 要求的必填字段，填写永远无法解析的
     `https://zotero-ai-bridge.invalid/update.json`，不发布任何更新。
-15. **Claude Science**：静态分析判定当前版本不兼容，只交付无 Hook 技能与复测说明（见 [connect-claude-science.md](connect-claude-science.md)）。
+15. **Claude Science**：当前版本不兼容（0.1.62 静态分析，0.1.63 实测添加连接器报 `safeFetch: https-only`），只交付无 Hook 技能与复测说明（见 [connect-claude-science.md](connect-claude-science.md)）。
 16. **不声明 `outputSchema`**：MCP 规定声明了 `outputSchema` 的工具在每个成功结果中都必须带符合该 Schema 的 `structuredContent`，
     客户端（例如官方 TypeScript SDK）会校验，不符合就把整个调用当作失败；而两个客户端的 Hook 路径只读取 text 内容，忽略
     `structuredContent`。只返回 JSON 文本可以让模型、Hook 和所有客户端看到同一份内容，也避免列表类结果必须包一层对象的限制。
@@ -248,7 +248,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 | 采集内容 | 选中条目、当前分类、阅读器附件、选中文字、选中批注与时间戳 | 另外采集打开的笔记（笔记标签页或独立笔记窗口）与焦点（`focus`），主窗口关闭时读取独立阅读器 / 笔记窗口 | Zotero 11 默认在标签页中打开笔记；笔记或阅读器标签页在前台时，条目列表的选择属于隐藏的文献库标签页，不能当作“这篇”（决策 20）。 |
 | 全文检索 | 全文检索仅用 Zotero 已有索引 | 一致；索引无法回答的词（3 个字母以下、单个汉字、中英文混合）在 `fulltext` 模式及 `everything` 模式的引号词中直接报 `INVALID_ARGUMENT` | Zotero 对这类词会退回到逐个读取所有附件的全文缓存，这已不是“用已有索引”，且在大型文献库上要几分钟（决策 21）。 |
 | 分页实现 | 分页默认 50、上限 200，返回后续分页信息 | 一致；翻页结果在内存中按请求缓存，Zotero 数据一变就清空 | 避免每翻一页都在 Zotero 主线程上重新检索和排序（决策 19）。 |
-| Claude Science | Connectors + Skill，HTTP URL 入口；回环可达性、JSON-only 兼容性、Origin 请求头均需实测，被拒绝则记录不兼容 | 只交付无 Hook 技能，状态“未验证 / 静态分析判定不兼容”；复测步骤列出 Origin / User-Agent 与 JSON-only 的检查 | Claude Science 0.1.62 的远程连接器只接受公网 https 地址，其沙箱代理也拦截过 `127.0.0.1:23119`；尚未实测，中继或隧道会突破安全边界（决策 15）。 |
+| Claude Science | Connectors + Skill，HTTP URL 入口；回环可达性、JSON-only 兼容性、Origin 请求头均需实测，被拒绝则记录不兼容 | 只交付无 Hook 技能，状态“不兼容”（0.1.63 实测，G-4）；复测步骤列出 Origin / User-Agent 与 JSON-only 的检查 | Claude Science 的远程连接器只接受公网 https 地址（0.1.63 实测报 `safeFetch: https-only`），其沙箱代理也拦截过 `127.0.0.1:23119`；中继或隧道会突破安全边界（决策 15）。 |
 
 ## 8. 运行约束与已知限制
 

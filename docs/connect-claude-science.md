@@ -29,9 +29,11 @@ Codex 和 Claude Code 通过 Hook 在每轮消息前自动附加 Zotero 快照�
 
 手动验收步骤见 [tests/clients/generic-no-hook/README.md](../tests/clients/generic-no-hook/README.md)。
 
-## 2. Claude Science：未验证 / 静态分析判定不兼容
+## 2. Claude Science：不兼容（已实测）
 
-**结论**：在 Claude Science 0.1.62（Windows 11，2026-10-14 安装）上，没有做过真实连接；根据静态分析，它目前**无法**连接本桥接。
+**结论**：Claude Science 目前**无法**连接本桥接。2026-10-16 在 0.1.63（Windows 11）上实际添加远程连接器，点 Add 后表单报错：
+“safeFetch: https-only (got http://) — http://127.0.0.1:23119/bridge/mcp. Remote MCP servers must be reachable at a public https URL.”
+连接器未被添加（验收项 G-4）。此前对 0.1.62 的静态分析得出相同结论。
 
 **原因**（详见 [integrations/claude-science/README.md](../integrations/claude-science/README.md)）：
 
@@ -49,4 +51,4 @@ Codex 和 Claude Code 通过 Hook 在每轮消息前自动附加 Zotero 快照�
 **复测**：Claude Science 更新后，按 [integrations/claude-science/README.md](../integrations/claude-science/README.md) 的
 “如何复测”逐步操作（包括原计划要求实测的三项：回环可达性、是否发送 `Origin` 请求头或浏览器 User-Agent、能否接受 JSON-only 响应），
 把版本、错误文字和日志行记录到 [acceptance.md](acceptance.md)。在真实复测通过之前，状态保持
-“未验证 / 静态分析判定不兼容”。
+“不兼容”。

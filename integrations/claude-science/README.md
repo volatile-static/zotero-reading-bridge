@@ -1,6 +1,7 @@
 # Claude Science：Zotero 技能（无 Hook）
 
-> 连接状态：**未验证 / 静态分析判定不兼容**（Claude Science 0.1.62，Windows 11，2026-10-14）。
+> 连接状态：**不兼容（已实测）**：Claude Science 0.1.63（Windows 11，2026-10-16）添加 `http://127.0.0.1:23119/bridge/mcp`
+> 远程连接器时报错 `safeFetch: https-only (got http://)`，连接器未被添加（`docs/acceptance.md` G-4）。
 > 本目录只提供一个无 Hook 的技能文件和复测方法，不提供任何中继、隧道或放宽安全规则的办法。
 
 ## 内容
@@ -14,9 +15,9 @@
 
 Claude Science 必须能以 MCP Streamable HTTP 访问 `http://127.0.0.1:23119/bridge/mcp`，并且 Zotero 正在同一台电脑上运行、Zotero AI Bridge 插件已启用（**工具 → 插件**）。桥接只监听 IPv4 回环地址，没有身份验证，只读。
 
-## 静态分析结论：为什么判定不兼容
+## 为什么不兼容
 
-以下结论来自本机安装的 Claude Science 0.1.62（`%LOCALAPPDATA%\Programs\ClaudeScience`，`install.json` 版本 0.1.62）的程序字符串和启动日志，没有做过真实连接：
+第 1 条已在 0.1.63 上实测证实（添加连接器时报 `safeFetch: https-only`）。以下结论最初来自本机安装的 Claude Science 0.1.62（`%LOCALAPPDATA%\Programs\ClaudeScience`，`install.json` 版本 0.1.62）的程序字符串和启动日志，没有做过真实连接：
 
 1. **远程连接器只接受公网 https 地址。** 添加自定义连接器时，URL 会经过 `safeFetch` 检查，程序中有 `safeFetch: https-only` 和 `safeFetch: non-public host rejected` 两个拒绝分支，并附带提示“Remote MCP servers must be reachable at a public https URL”。`http://127.0.0.1:...` 同时违反这两条。
 2. **沙箱代理拦截过 Zotero 端口。** 本机启动日志 `%LOCALAPPDATA%\ClaudeScience\desktop-launch.log` 中出现过 `[proxy] denied 127.0.0.1:23119 (blocked-port) via HTTP`，说明沙箱的出站代理曾拦截访问 23119 端口的请求。本地（stdio）连接器是否运行在同一个沙箱中、是否同样被拦截、能否通过授权放行，都**未验证**；本地 stdio 连接器也不是本方案的接入方式。
@@ -57,4 +58,4 @@ G-4、W-5、N-3 行（逐步操作也可参考 `tests/clients/generic-no-hook/RE
 - 工具列表是否出现 18 个工具，`get_status` 与 `get_current_context` 的返回摘要；
 - PDF 阅读：`get_attachment_path` 返回的路径是否能被 Claude Science 读取（沙箱可能无法读取本地文件）。
 
-在真实复测通过之前，状态保持“未验证 / 静态分析判定不兼容”。
+在真实复测通过之前，状态保持“不兼容”。

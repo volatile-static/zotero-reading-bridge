@@ -71,7 +71,7 @@ Codex / Claude Code ──MCP（HTTP，仅本机）──► Zotero 11 中的 Zo
 - Claude Code 2.1.118 或更新版本（`mcp_tool` Hook）；在 2.1.295 上验证过插件安装。
 - 修改 Zotero 的 HTTP 端口需要重启 Zotero，并同步修改客户端配置。
 - Codex：会话开始时 Zotero 必须已在运行（Hook 不会等待或重连服务器）；插件 Hook 必须信任，Hook 定义变化后需重新信任。
-- Claude Science 0.1.62：静态分析判定无法连接本机 HTTP 端点，状态“未验证 / 静态分析判定不兼容”。
+- Claude Science 0.1.63：远程连接器只接受公网 https 地址，添加本机 HTTP 端点时报 `safeFetch: https-only`，实测不兼容。
 - 阅读器中的页码、选中文字和选中批注通过 Zotero 的内部接口读取，未来的 Zotero 版本可能读不到（快照会给出警告）。
 
 当前各验收项的状态见 [docs/acceptance.md](docs/acceptance.md)。

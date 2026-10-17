@@ -78,8 +78,7 @@ export const XPI_LOCALES = ["en-US", "zh-CN"] as const;
 
 export const OUTPUT_NAMES = {
   xpi: `${BRIDGE_NAME}.xpi`,
-  codex: `${BRIDGE_NAME}-codex.zip`,
-  claudeCode: `${BRIDGE_NAME}-claude-code.zip`,
+  codex: `${BRIDGE_NAME}-desktop.zip`,
   claudeDesktop: `${BRIDGE_NAME}-claude-desktop.mcpb`,
   scienceDir: "claude-science-zotero-skill",
   source: "source.zip",
@@ -96,12 +95,6 @@ export interface ClientPackageSpec {
 
 export const CLIENT_PACKAGES: readonly ClientPackageSpec[] = [
   { id: "codex", sourceDir: "packages/codex", manifest: ".codex-plugin/plugin.json", archive: OUTPUT_NAMES.codex },
-  {
-    id: "claude-code",
-    sourceDir: "packages/claude-code",
-    manifest: ".claude-plugin/plugin.json",
-    archive: OUTPUT_NAMES.claudeCode,
-  },
 ];
 
 /** Marketplace manifests whose plugin entries may carry a `version` that must match the plugin's. */

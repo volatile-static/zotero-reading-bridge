@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { bundleClassicScript, bundleForInspection, bundleNodeScript } from "../../scripts/lib/bundle.js";
+import { desktopPluginEntries } from "../../scripts/package-desktop-plugin.js";
 import {
   type FileMap,
   bundleContractProblems,
@@ -617,6 +618,25 @@ const failures = (results: readonly { ok: boolean; name: string; detail?: string
   results.filter((r) => !r.ok).map((r) => `${r.name}: ${r.detail ?? ""}`);
 
 describe("client plugin checks", () => {
+  it("assembles a desktop package and rejects a missing relay or desktop declaration", () => {
+    const source = codexFiles({
+      "plugin.json": {
+        $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+        name: "zotero-ai-bridge", version: "1.0.0", extensions: { "com.openai": {} },
+      },
+      ".agents/plugins/marketplace.json": {},
+    });
+    const relay = { name: "server/zotero-relay.js", data: Buffer.from("// shared relay") };
+    const entries = desktopPluginEntries([...source].map(([name, data]) => ({ name, data })), relay);
+    const files = new Map<string, Buffer>(entries.map(({ name, data }) => [name, Buffer.from(data)]));
+    assert.deepEqual(failures(codexPackageChecks(files, "1.0.0", true)), []);
+    assert.deepEqual(files.get(relay.name), relay.data);
+    files.delete(relay.name);
+    assert.match(failures(codexPackageChecks(files, "1.0.0", true)).join("\n"), /missing relay/);
+    files.set(relay.name, relay.data);
+    files.set("plugin.json", source.get("plugin.json")!);
+    assert.match(failures(codexPackageChecks(files, "1.0.0", true)).join("\n"), /desktop execution must be declared/);
+  });
   it("accept well-formed Codex and Claude Code packages", () => {
     assert.deepEqual(failures(codexPackageChecks(codexFiles(), "1.0.0")), []);
     assert.deepEqual(failures(claudeCodePackageChecks(claudeFiles(), "1.0.0")), []);

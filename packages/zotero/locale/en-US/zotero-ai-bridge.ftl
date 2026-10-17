@@ -17,14 +17,8 @@ zotero-ai-bridge-pref-copy-address =
 zotero-ai-bridge-pref-port-note = The address always shows the port Zotero is actually using. Changing Zotero's HTTP server port requires restarting Zotero and updating client configurations.
 
 zotero-ai-bridge-pref-clients-heading = Connect AI Clients
-zotero-ai-bridge-pref-codex-description = Codex: the Zotero AI Bridge plugin for Codex already includes this server and its prompt hook. Use either the plugin or manual configuration, not both. For manual configuration, add the copied configuration (server and optional hook) to ~/.codex/config.toml.
-zotero-ai-bridge-pref-copy-codex =
-    .label = Copy Codex Configuration
-zotero-ai-bridge-pref-claude-description = Claude Code: the Zotero AI Bridge plugin for Claude Code already includes this server and its prompt hook. Use either the plugin or manual registration, not both. For manual registration, run the command and add the hook settings to Claude Code's settings.json.
-zotero-ai-bridge-pref-copy-claude =
-    .label = Copy Claude Code Command
-zotero-ai-bridge-pref-copy-claude-hook =
-    .label = Copy Hook Settings
+zotero-ai-bridge-pref-codex-description = Codex desktop: drag zotero-ai-bridge-desktop.zip into Plugins → Add → New Plugin.
+zotero-ai-bridge-pref-claude-description = Claude desktop: drag zotero-ai-bridge-claude-desktop.mcpb into Settings → Extensions.
 zotero-ai-bridge-pref-copied = Copied to the clipboard.
 
 zotero-ai-bridge-pref-security-heading = Security

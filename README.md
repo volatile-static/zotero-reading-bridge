@@ -1,12 +1,9 @@
 # Zotero AI Bridge
 
-让 Codex、Claude Code、Claude 桌面应用等 AI 客户端**只读**访问本机正在运行的 Zotero：检索文献库、读取条目元数据、笔记、批注和附件路径，
-并在每次发送消息前自动附加你当前在 Zotero 中的选择（选中的条目、打开的 PDF、页码、选中的文字和批注）。
+让 Codex 和 Claude 桌面应用**只读**访问本机 Zotero：检索文献、读取元数据、全文、笔记和批注。Codex 在宿主支持并信任 Hook 时自动附加当前选择；Claude 桌面版按需获取当前选择。
 
-```
-Codex / Claude Code ──MCP（HTTP，仅本机）──► Zotero 11 中的 Zotero AI Bridge 插件 ──► 你的文献库（只读）
-   └─ 每条消息前的 Hook：capture_prompt_context → 当前 Zotero 选择的快照
-Claude 桌面应用 ──stdio──► zotero-relay.js（子进程，不监听端口）──HTTP，仅 127.0.0.1──► 同上（无 Hook，按需调用 get_current_context）
+```text
+Codex / Claude 桌面版 → stdio 中继 → 本机 HTTP → Zotero Bridge → 文献库
 ```
 
 ## 组成
@@ -14,9 +11,8 @@ Claude 桌面应用 ──stdio──► zotero-relay.js（子进程，不监听
 | 组件 | 源码 | 构建产物 | 作用 |
 |---|---|---|---|
 | Zotero 插件 | `packages/zotero/` | `outputs/zotero-ai-bridge.xpi` | 在 Zotero 自带的本机 HTTP 服务器上提供 MCP 端点 `http://127.0.0.1:23119/bridge/mcp`（别名 `/codex/mcp`），19 个只读工具 |
-| Codex 插件 | `packages/codex/` | `outputs/zotero-ai-bridge-codex.zip` | MCP 服务器 `zotero_bridge` + 每轮上下文 Hook + 使用说明技能 |
-| Claude Code 插件 | `packages/claude-code/` | `outputs/zotero-ai-bridge-claude-code.zip` | MCP 服务器 `plugin:zotero-ai-bridge:zotero` + 每轮上下文 Hook + 技能 |
-| Claude 桌面应用扩展 | `packages/claude-desktop/` | `outputs/zotero-ai-bridge-claude-desktop.mcpb` | stdio↔HTTP 中继 `server/zotero-relay.js`（零依赖 Node，只连 `127.0.0.1`，不监听端口）；也可在 `claude_desktop_config.json` 中手动配置 |
+| Codex 桌面插件 | packages/codex/ | outputs/zotero-ai-bridge-desktop.zip | 拖拽导入；内置中继、技能及上下文 Hook |
+| Claude 桌面应用扩展 | `packages/claude-desktop/` | `outputs/zotero-ai-bridge-claude-desktop.mcpb` | stdio↔HTTP 中继 `server/zotero-relay.js`（零依赖 Node，只连 `127.0.0.1`，不监听端口） |
 | 无 Hook 技能 | `integrations/claude-science/` | `outputs/claude-science-zotero-skill/` | 供没有 Hook 的 MCP 客户端使用（按需调用 `get_current_context`） |
 
 ## 工具（全部只读）
@@ -34,24 +30,14 @@ Claude 桌面应用 ──stdio──► zotero-relay.js（子进程，不监听
 
 ## 快速开始
 
-1. **构建**（Node.js 22.12 或更新版本）：
+1. 在 Zotero 的“工具 → 插件”中拖入 **zotero-ai-bridge.xpi**，确认 Bridge 正在运行。
+2. **Codex 桌面版**：在 **Customize → Plugins → Add → New Plugin** 中拖入 **zotero-ai-bridge-desktop.zip**。详见 [安装说明](docs/install-codex.md)。
+3. **Claude 桌面版**：在 **设置 → 扩展** 中拖入 **zotero-ai-bridge-claude-desktop.mcpb**。详见 [安装说明](docs/install-claude-desktop.md)。
+4. 新建对话，询问“读取我当前在 Zotero 中选中的论文，给出 libraryID 和 key”。
 
-   ```powershell
-   npm ci
-   npm run build    # 类型检查 + 打包到 outputs/
-   npm run verify   # 校验产物结构、清单、敏感信息
-   ```
+无需解压安装包、注册本地市场或编辑配置文件。先启动 Zotero，再使用客户端。Codex 插件需要系统 Node.js 18+；Claude 扩展可使用应用自带的 Node.js。更新时重新导入新版安装包，卸载在各应用的插件或扩展页面完成。
 
-2. **安装 Zotero 插件**：Zotero 11 中「工具 → 插件」，从文件安装 `outputs/zotero-ai-bridge.xpi`。在
-   「编辑 → 设置 → Zotero AI Bridge」中确认状态为“运行中，地址 127.0.0.1:23119”。详见 [docs/install-zotero.md](docs/install-zotero.md)。
-3. **安装客户端插件**（二选一或都装）：
-   - Codex：[docs/install-codex.md](docs/install-codex.md)。安装后必须在 `/hooks` 或桌面版 “Review hooks” 中**信任 Hook**；
-     **先启动 Zotero，再开始 Codex 会话**。
-   - Claude Code：[docs/install-claude-code.md](docs/install-claude-code.md)。插件与 `claude mcp add` 手动注册**二选一**。
-   - Claude 桌面应用（聊天 / Cowork）：[docs/install-claude-desktop.md](docs/install-claude-desktop.md)。安装 `.mcpb` 扩展或在
-     `claude_desktop_config.json` 中手动配置中继；没有 Hook，配合无 Hook 技能使用。
-   - 其他 MCP 客户端 / Claude Science：[docs/connect-claude-science.md](docs/connect-claude-science.md)。
-4. **试用**：在 Zotero 中选中一篇论文，问“我当前在 Zotero 中选中的是哪篇论文？请给出 libraryID 和 key。”
+开发者生成安装包：先运行 npm ci，再运行 npm run package:desktop-plugin 和 npm run verify。Codex ZIP、Zotero XPI 和 Claude MCPB 均位于 outputs/。两个桌面安装包共用同一份中继代码。
 
 ## 安全边界：本机可访问、只读
 
@@ -76,7 +62,7 @@ Claude 桌面应用 ──stdio──► zotero-relay.js（子进程，不监听
 - Claude Code 2.1.118 或更新版本（`mcp_tool` Hook）；在 2.1.295 上验证过插件安装。
 - 修改 Zotero 的 HTTP 端口需要重启 Zotero，并同步修改客户端配置。
 - Codex：会话开始时 Zotero 必须已在运行（Hook 不会等待或重连服务器）；插件 Hook 必须信任，Hook 定义变化后需重新信任。
-- Claude 桌面应用：本地 MCP 服务器只能是 stdio 命令，经中继接入；扩展在 Claude 桌面应用 2.42304.0 中实测可用（聊天与 Cowork），手动配置未验证（[docs/acceptance.md](docs/acceptance.md) 第 17 节）。
+- Claude 桌面应用：本地 MCP 服务器只能是 stdio 命令，经中继接入；扩展在 Claude 桌面应用 2.42304.0 中实测可用（聊天与 Cowork）（[docs/acceptance.md](docs/acceptance.md) 第 17 节）。
 - Claude Science 0.1.63：远程连接器只接受公网 https 地址，添加本机 HTTP 端点时报 `safeFetch: https-only`，实测不兼容。
 - 阅读器中的页码、选中文字和选中批注通过 Zotero 的内部接口读取，未来的 Zotero 版本可能读不到（快照会给出警告）。
 
@@ -87,14 +73,12 @@ Claude 桌面应用 ──stdio──► zotero-relay.js（子进程，不监听
 | 文档 | 内容 |
 |---|---|
 | [docs/install-zotero.md](docs/install-zotero.md) | 安装 Zotero 插件、设置页面、验证端点、修改端口 |
-| [docs/install-codex.md](docs/install-codex.md) | Codex 插件安装、Hook 信任、手动配置 |
-| [docs/install-claude-code.md](docs/install-claude-code.md) | Claude Code 插件安装、手动注册 |
-| [docs/install-claude-desktop.md](docs/install-claude-desktop.md) | Claude 桌面应用：`.mcpb` 扩展、手动配置、无 Hook 技能 |
+| [docs/install-codex.md](docs/install-codex.md) | Codex 插件安装、Hook 信任、拖拽安装 |
+| [docs/install-claude-desktop.md](docs/install-claude-desktop.md) | Claude 桌面应用：`.mcpb` 扩展、拖拽安装、无 Hook 技能 |
 | [docs/connect-claude-science.md](docs/connect-claude-science.md) | 无 Hook 客户端与 Claude Science |
 | [docs/architecture.md](docs/architecture.md) | 架构、协议细节、安全边界、设计决策与原计划差异 |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | 故障排查 |
 | [docs/acceptance.md](docs/acceptance.md) | 验收清单与记录 |
-| [examples/](examples/) | Codex `config.toml` 与 Claude Code 手动注册示例 |
 
 ## 开发
 

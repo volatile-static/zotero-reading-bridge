@@ -13,7 +13,6 @@ import path from "node:path";
 import {
   type CheckResult,
   type FileMap,
-  claudeCodePackageChecks,
   claudeDesktopPackageChecks,
   codexPackageChecks,
   readText,
@@ -70,7 +69,6 @@ interface PackageContent {
 const ARCHIVES = [
   OUTPUT_NAMES.xpi,
   OUTPUT_NAMES.codex,
-  OUTPUT_NAMES.claudeCode,
   OUTPUT_NAMES.claudeDesktop,
   OUTPUT_NAMES.source,
 ] as const;
@@ -271,15 +269,15 @@ export async function verifyPackage(options: VerifyOptions): Promise<VerifyRow[]
   const codex = await readArchive(outputsDir, OUTPUT_NAMES.codex, rows);
   if (codex) {
     contents.push({ label: OUTPUT_NAMES.codex, files: codex });
-    add(OUTPUT_NAMES.codex, codexPackageChecks(codex, version));
-  }
-  const claude = await readArchive(outputsDir, OUTPUT_NAMES.claudeCode, rows);
-  if (claude) {
-    contents.push({ label: OUTPUT_NAMES.claudeCode, files: claude });
-    add(OUTPUT_NAMES.claudeCode, claudeCodePackageChecks(claude, version));
+    add(OUTPUT_NAMES.codex, codexPackageChecks(codex, version, true));
   }
   const desktop = await readArchive(outputsDir, OUTPUT_NAMES.claudeDesktop, rows);
   if (desktop) {
+    rows.push({ group: OUTPUT_NAMES.codex, ...runCheck("relay matches Claude Desktop byte for byte", () => {
+      const relay = codex?.get(DESKTOP_RELAY_OUT);
+      const other = desktop.get(DESKTOP_RELAY_OUT);
+      return relay && other && relay.equals(other) ? [] : ["desktop relay mismatch"];
+    }) });
     contents.push({ label: OUTPUT_NAMES.claudeDesktop, files: desktop });
     add(OUTPUT_NAMES.claudeDesktop, claudeDesktopPackageChecks(desktop, version));
     const relay = desktop.get(DESKTOP_RELAY_OUT);

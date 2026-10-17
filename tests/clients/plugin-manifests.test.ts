@@ -286,38 +286,6 @@ describe("Claude Science integration", () => {
   });
 });
 
-describe("manual configuration examples", () => {
-  it("Codex config example registers zotero_bridge and the same hook", () => {
-    const toml = readText("examples/codex-config.toml.example");
-    assert.match(toml, /^\[mcp_servers\.zotero_bridge\]$/m);
-    assert.match(toml, new RegExp(`^url = "${CANONICAL_URL.replace(/[.]/g, "\\.")}"$`, "m"));
-    assert.match(toml, /^server = "zotero_bridge"$/m);
-    assert.match(toml, new RegExp(`^tool = "${HOOK_TOOL}"$`, "m"));
-    assert.match(toml, /^timeout = 5$/m);
-    assert.match(toml, /^client = "codex"$/m);
-    assert.deepEqual([...new Set(placeholdersIn(toml))].sort(), ["session_id", "turn_id"]);
-    assert.doesNotMatch(toml, /^\s*default_tools_approval_mode/m);
-  });
-
-  it("Claude Code settings.json hook example targets the manually added server", () => {
-    const md = readText("examples/claude-mcp-add.md");
-    const manual = CLIENT_SERVER_NAMES.claudeCodeManual;
-    assert.ok(md.includes(`claude mcp add --transport http --scope user ${manual} ${CANONICAL_URL}`));
-    const block = /```json\r?\n([\s\S]*?)```/.exec(md)?.[1];
-    assert.ok(block, "examples/claude-mcp-add.md needs a json code block");
-    const settings: unknown = JSON.parse(block);
-    assert.ok(isObject(settings));
-    assert.deepEqual(sortedKeys(settings), ["hooks"]);
-    const claude = CLIENTS[1];
-    assert.ok(claude);
-    checkHooksFile({ description: "settings.json", hooks: settings.hooks }, claude, manual);
-    // No manual command or hook in the docs still uses the collision-prone bare name.
-    for (const rel of ["examples/claude-mcp-add.md", "docs/install-claude-code.md", "docs/install-zotero.md", "docs/troubleshooting.md", "packages/claude-code/README.md"]) {
-      assert.doesNotMatch(readText(rel), /claude mcp (?:add [^\n]*--scope user|remove|get) zotero(?![\w-])/, rel);
-    }
-  });
-});
-
 describe("Claude Desktop extension (packages/claude-desktop)", () => {
   const manifest = readJson("packages/claude-desktop/manifest.json");
 
@@ -337,19 +305,6 @@ describe("Claude Desktop extension (packages/claude-desktop)", () => {
   it("ships a Chinese README and no prebuilt relay (the build bundles src/)", () => {
     assert.match(readText("packages/claude-desktop/README.md"), /[一-鿿]/);
     assert.equal(existsSync(repoPath("packages/claude-desktop/server/zotero-relay.js")), false);
-  });
-
-  it("install doc's claude_desktop_config.json example runs the relay with node, a port and nothing else", () => {
-    const doc = readText("docs/install-claude-desktop.md");
-    const block = /```json\r?\n\s*(\{[\s\S]*?"mcpServers"[\s\S]*?\})\s*\r?\n\s*```/.exec(doc);
-    assert.ok(block?.[1], "docs/install-claude-desktop.md must contain the claude_desktop_config.json example");
-    const config = JSON.parse(block[1]);
-    assert.deepEqual(sortedKeys(config.mcpServers), [CLIENT_SERVER_NAMES.claudeDesktopManual]);
-    const server = config.mcpServers[CLIENT_SERVER_NAMES.claudeDesktopManual];
-    assert.deepEqual(sortedKeys(server), ["args", "command"]);
-    assert.equal(server.command, "node");
-    assert.match(server.args[0], /[\\/]server[\\/]zotero-relay\.js$/);
-    assert.deepEqual(server.args.slice(1), ["--port", "23119"]);
   });
 
   it("docs link the Claude Desktop guide and the acceptance checklist has its section", () => {

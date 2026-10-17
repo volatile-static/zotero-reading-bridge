@@ -274,7 +274,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 | 主题 | 原计划 | 实际实现 | 原因 |
 |---|---|---|---|
 | Codex 插件布局 | 插件根目录放 `plugin.json`、`mcp.json` 与 `hooks/hooks.json` | `.codex-plugin/plugin.json` + `.mcp.json` + `hooks/hooks.json` | Codex 0.162 忽略不带 agent-plugins.org `$schema` 的根目录 `plugin.json`；带 `$schema` 的布局又禁止在 `mcp.json` 中设置超时（决策 1）。 |
-| Codex 安装方式 | 未规定（“打包不等于市场安装入口；安装文档给出本地加载 / 注册方法”） | 插件根目录自带 `.agents/plugins/marketplace.json`（`"path": "./"`），一个目录既是插件也是本地市场 | 已用真实 `codex.exe` 在临时目录验证 `"./"` 被接受，用户只需 `codex plugin marketplace add <目录>` 一步。 |
+| Codex 安装方式 | 桌面安装包 | 在 Plugins → Add → New Plugin 拖入 zotero-ai-bridge-desktop.zip | 用户于 2026-10-17 确认导入成功，内置与 Claude 桌面版共用的 stdio 中继。 |
 | MCP 服务器名 | 未规定名字；只要求 Hook 引用实际连接名（Claude Code 插件内置服务器写 `plugin:<plugin-name>:<server-name>`，手动注册用实际注册名） | Codex：`zotero_bridge`；Claude Code：插件内键 `zotero`（Hook 中写 `plugin:zotero-ai-bridge:zotero`），手动注册名 `zotero_bridge` | 属于补充规定：`zotero` 常被其他 Zotero MCP 服务器占用。Codex 中 `config.toml` 的同名条目会截走 Hook 调用；Claude Code 中 local / project 作用域的同名服务器会覆盖 user 作用域的手动注册（决策 2、3）。 |
 | Hook 输入 | 只传客户端及会话 / 本轮标识：Codex 为 `client` + `${turn_id}`，Claude Code 为 `client` + `${session_id}`；不传用户问题全文、会话记录路径或记录内容 | Codex：`client`、`session_id`、`turn_id`；Claude Code：`client`、`session_id`、`prompt_id`（可能为空，视为没有）；同样不传提示词、工作目录或记录路径 | 在原计划的标识之外各补一个本端确实存在的占位符，使 snapshotId 能区分会话与同一会话中的各条提示（Claude Code 没有 `turn_id`）；Codex 遇到不存在的占位符会让 Hook 失败，所以两端的 Hook 定义（原计划本来就分两份文件）只用各自的占位符（决策 4）。 |
 | Claude Code 注册 | 安装说明区分插件内置 MCP 与 CLI 手动添加，不重复注册；手动注册时 Hook 用实际注册名 | 一致（二选一），并写明原因与改用插件时的清理步骤：删除手动服务器**和** settings.json 中的手动 Hook | 补充原因：Claude Code 按 URL 去重且手动注册优先，并存会隐藏插件服务器、使插件 Hook 失效（已实测）；只删服务器会留下每轮报错的 Hook。 |
@@ -289,7 +289,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 | 全文检索 | 全文检索仅用 Zotero 已有索引 | 一致；索引无法回答的词（3 个字母以下、单个汉字、中英文混合）在 `fulltext` 模式及 `everything` 模式的引号词中直接报 `INVALID_ARGUMENT` | Zotero 对这类词会退回到逐个读取所有附件的全文缓存，这已不是“用已有索引”，且在大型文献库上要几分钟（决策 21）。 |
 | 分页实现 | 分页默认 50、上限 200，返回后续分页信息 | 一致；翻页结果在内存中按请求缓存，Zotero 数据一变就清空 | 避免每翻一页都在 Zotero 主线程上重新检索和排序（决策 19）。 |
 | Claude Science | Connectors + Skill，HTTP URL 入口；回环可达性、JSON-only 兼容性、Origin 请求头均需实测，被拒绝则记录不兼容 | 只交付无 Hook 技能，状态“不兼容”（0.1.63 实测，G-4）；复测步骤列出 Origin / User-Agent 与 JSON-only 的检查 | Claude Science 的远程连接器只接受公网 https 地址（0.1.63 实测报 `safeFetch: https-only`），其沙箱代理也拦截过 `127.0.0.1:23119`；隧道、端口转发或监听端口的中继会突破安全边界（决策 15）。Claude 桌面应用使用的 stdio 子进程中继不在此列（决策 22），但它在 Claude Science 中是否可用、沙箱是否放行都未验证，本方案不把它作为 Claude Science 的接入方式。 |
-| Claude 桌面应用 | 未规定 | `.mcpb` 扩展（或 `claude_desktop_config.json` 手动配置）运行零依赖的 stdio↔HTTP 中继，配合无 Hook 技能；未在真实应用中验证（[acceptance.md](acceptance.md) 第 17 节） | 桌面应用的本地 MCP 服务器和扩展只接受 stdio 命令，远程连接器只接受公网 https；中继作为子进程只通过管道通信、不监听端口，目标固定为 `127.0.0.1`（决策 22）。 |
+| Claude 桌面应用 | 未规定 | `.mcpb` 扩展运行零依赖的 stdio↔HTTP 中继，配合无 Hook 技能；未在真实应用中验证（[acceptance.md](acceptance.md) 第 17 节） | 桌面应用的本地 MCP 服务器和扩展只接受 stdio 命令，远程连接器只接受公网 https；中继作为子进程只通过管道通信、不监听端口，目标固定为 `127.0.0.1`（决策 22）。 |
 
 ## 8. 运行约束与已知限制
 

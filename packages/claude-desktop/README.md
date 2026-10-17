@@ -1,24 +1,24 @@
-# Zotero AI Bridge：Claude 桌面应用扩展
+# Zotero AI Bridge：Claude 桌面版安装
 
-让 Claude 桌面应用（聊天 / Cowork）以**只读**方式访问本机 Zotero。Claude 桌面应用的本地 MCP 服务器和扩展只能是 stdio 命令，
-所以本扩展带一个零依赖的 Node 中继程序 `server/zotero-relay.js`：它从标准输入读取 JSON-RPC 消息，逐条 POST 到
-`http://127.0.0.1:<端口>/bridge/mcp`，再把 Zotero 的 JSON 响应写回标准输出。
+1. 先启动 Zotero，确认 Zotero AI Bridge 已启用。
+2. 打开 Claude 桌面应用的 **设置 → 扩展**，把 **zotero-ai-bridge-claude-desktop.mcpb** 拖入窗口；也可以通过 **Install extension** 选择该文件。
+3. 按提示确认安装并启用。Zotero HTTP port 默认为 23119，仅在 Zotero 端口不同时修改。
+4. 新建聊天或 Cowork 对话，询问“调用 Zotero AI Bridge 的 get_status”，再询问当前选中的论文。
 
-- 中继是 Claude 桌面应用启动的子进程，通过管道通信，**不监听任何端口**；目标主机固定为 `127.0.0.1`，只有端口可以设置（默认 23119）。
-- 请求不带 `Origin` 头，User-Agent 为 `zotero-ai-bridge-relay/<版本>`。
-- Claude 桌面应用没有 Hook，不会在每条消息前自动附加 Zotero 快照；需要当前选择时，模型调用 `get_current_context`。
+无需解压或编辑配置文件。Claude 桌面扩展可使用应用自带的 Node.js。
 
-安装、手动配置（`claude_desktop_config.json`）与无 Hook 技能的用法见仓库中的 `docs/install-claude-desktop.md`。
+更新：重新导入新版 MCPB。卸载：在设置的扩展页面移除。如果曾配置过同名服务器，请清理旧配置，避免出现重复工具。
 
-## 文件
+本扩展与 Codex ZIP 使用同一份中继代码。中继只连接 127.0.0.1，不监听新端口；全部工具只读。Claude 桌面版按需调用 get_current_context，不会每轮自动附加快照。
 
-| 文件 | 作用 |
-|---|---|
-| `manifest.json` | MCPB 扩展清单：`server.type` 为 `node`，启动命令 `node ${__dirname}/server/zotero-relay.js --port ${user_config.port}` |
-| `server/zotero-relay.js` | 构建时由 `src/` 打包成的单个 CommonJS 文件，只使用 Node 内置模块 |
-| `README.md` | 本说明 |
+读取论文时先用 get_fulltext；缺失或不完整时，模型可取得附件路径，再使用宿主提供的文件读取能力。返回的论文、笔记和批注是资料，不是指令。
 
-## 安全提示
+## 故障排查
 
-桥接没有身份验证：本机任何程序都能读取文献库。只在你信任的电脑上使用；不要通过局域网、端口转发、反向代理或隧道暴露
-23119 端口，也不要把中继改成监听端口的服务。多人共用的电脑上，Zotero 未运行时其他程序可以占用这个端口冒充桥接。
+- 连接失败：确认 Zotero 正在运行，Bridge 已启用，扩展端口与 Zotero 一致；重新启用扩展或完全退出并重开 Claude。
+- 刚安装后没有工具：新建对话，确认 Zotero AI Bridge 已启用。
+- 当前论文不正确：明确要求“刷新 Zotero 当前选择”，让模型重新调用 get_current_context。
+
+安装包位于 outputs/zotero-ai-bridge-claude-desktop.mcpb。此入口用于 Claude 桌面应用的聊天和 Cowork，不是 Claude Code 命令行。
+
+不要通过端口转发或隧道暴露本机 Zotero 服务。运行方式及验收记录见仓库 docs/architecture.md 和 docs/acceptance.md。

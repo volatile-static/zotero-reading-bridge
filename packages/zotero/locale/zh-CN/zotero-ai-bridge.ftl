@@ -17,14 +17,8 @@ zotero-ai-bridge-pref-copy-address =
 zotero-ai-bridge-pref-port-note = 这里始终显示 Zotero 实际使用的端口。修改 Zotero HTTP 服务器端口需要重启 Zotero，并同步更新各客户端的配置。
 
 zotero-ai-bridge-pref-clients-heading = 连接 AI 客户端
-zotero-ai-bridge-pref-codex-description = Codex：Zotero AI Bridge 的 Codex 插件已包含此服务器及其提示词钩子。插件和手动配置二选一，不要同时使用。手动配置时，请把复制的配置（服务器和可选的钩子）添加到 ~/.codex/config.toml。
-zotero-ai-bridge-pref-copy-codex =
-    .label = 复制 Codex 配置
-zotero-ai-bridge-pref-claude-description = Claude Code：Zotero AI Bridge 的 Claude Code 插件已包含此服务器及其提示词钩子。插件和手动注册二选一，不要同时使用。手动注册时，请运行该命令，并把钩子设置加入 Claude Code 的 settings.json。
-zotero-ai-bridge-pref-copy-claude =
-    .label = 复制 Claude Code 命令
-zotero-ai-bridge-pref-copy-claude-hook =
-    .label = 复制钩子设置
+zotero-ai-bridge-pref-codex-description = Codex 桌面版：在 Plugins → Add → New Plugin 中拖入 zotero-ai-bridge-desktop.zip。
+zotero-ai-bridge-pref-claude-description = Claude 桌面版：在设置 → 扩展中拖入 zotero-ai-bridge-claude-desktop.mcpb。
 zotero-ai-bridge-pref-copied = 已复制到剪贴板。
 
 zotero-ai-bridge-pref-security-heading = 安全

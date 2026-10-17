@@ -57,14 +57,9 @@ Local API（`/api/`），与本插件无关。
 - 「地址」与「别名（同一端点）」：实际地址 `http://127.0.0.1:<端口>/bridge/mcp` 与 `/codex/mcp`。两个路径完全等价，客户端配置统一使用
   `/bridge/mcp`。端口始终是 Zotero 实际使用的端口。「复制地址」复制主地址。
 
-**连接 AI 客户端**（用于不安装客户端插件的手动配置；HTTP 服务器未运行时，前两个按钮不可用）
+**连接 AI 客户端**
 
-- 「复制 Codex 配置」：`~/.codex/config.toml` 中的 `[mcp_servers.zotero_bridge]` 段，加上与插件等价的可选
-  `UserPromptSubmit` Hook 段（内容同 `examples/codex-config.toml.example`，见 [install-codex.md](install-codex.md) 第 6 节）。
-  与 Codex 插件二选一；Hook 需要在 Codex 中信任一次。
-- 「复制 Claude Code 命令」：`claude mcp add --transport http --scope user zotero_bridge <地址>`（user 作用域，所有项目目录可用，见
-  [install-claude-code.md](install-claude-code.md) 第 7 节）。服务器名用 `zotero_bridge` 而不是 `zotero`，以免与其他 Zotero MCP 服务器重名。
-- 「复制钩子设置」：Claude Code `settings.json` 的 `hooks` 段，引用手动注册的服务器 `zotero_bridge`。
+设置页提示两个拖拽入口：Codex 的 Plugins → Add → New Plugin，以及 Claude 桌面版的设置 → 扩展。分别选择 ZIP 和 MCPB 安装包。
 
 **安全**：只读与本机访问说明，以及调试日志提示，见下文第 7 节。
 
@@ -102,8 +97,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:23119/bridge/mcp `
 
 1. 在 **设置 → 高级 → 设置编辑器** 中修改 `extensions.zotero.httpServer.port`，然后**重启 Zotero**（Zotero 只在启动时绑定端口）。
 2. 在「Zotero AI Bridge」设置页面确认新地址。
-3. 修改所有客户端配置中的端口：插件用户需要编辑插件目录中的 `.mcp.json` 后重新安装或更新插件（见
-   [install-codex.md](install-codex.md)、[install-claude-code.md](install-claude-code.md)）；手动配置的用户修改相应配置。
+3. Claude 桌面版在扩展设置中修改 Zotero HTTP port。Codex 安装包默认使用 23119；自定义端口需要开发者调整打包脚本的中继启动参数并重新生成 ZIP。
 
 如果 Zotero 的 HTTP 服务器被关闭，**设置 → 高级 → 杂项** 中会显示「Zotero HTTP 服务器已禁用。」和「启用并重启」按钮。
 
@@ -119,7 +113,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:23119/bridge/mcp `
   作为附加上下文交给模型（整段文字由对方决定，包括“规则”和假的快照），它提供的服务器说明和工具说明也会进入模型上下文，
   模型可能照着执行命令。Hook 发出的只有会话 / 轮次 id，但注入的文字不受控制。因此：
   - 在多人共用的电脑（实验室、机房、共享工作站）上，**不要安装 Codex / Claude Code 客户端插件**（尤其是其中的 Hook），
-    或在不用时卸载；手动配置时不要添加 Hook 段；
+    或在不用时卸载；
   - 先启动 Zotero 再启动客户端，并在客户端中留意来历不明的“Zotero snapshot rules”或要求执行命令的内容；
   - 客户端无法验证服务器身份，这个风险只能靠上面的使用方式避免（桥接本身没有令牌：令牌只能证明客户端的身份，证明不了服务器的身份）。
 - **不要暴露到网络**：不要配置局域网访问、端口转发、反向代理、内网穿透或任何隧道。
@@ -138,4 +132,4 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:23119/bridge/mcp `
 - 临时停用：要停止桥接，在 Zotero 中禁用插件（**工具 → 插件**）。两个端点立即注销（客户端收到 404），Zotero Connector 不受影响；
   重新启用后立即恢复，无需重启 Zotero。
 - 卸载：**工具 → 插件** 中移除插件。插件不在 Zotero 数据目录中写入任何数据，也不修改 Zotero 或 Zotero Connector 的首选项。
-- 同时从 Codex / Claude Code 中卸载客户端插件或删除手动配置，否则客户端每轮会报连接失败（不影响对话本身）。
+- 同时在 Codex / Claude 桌面版的插件或扩展页面卸载本插件，否则客户端每轮会报连接失败（不影响对话本身）。

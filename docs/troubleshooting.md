@@ -23,41 +23,20 @@
 | HTTP 403 | 请求带了 `Origin`（例如浏览器页面附加了 `X-Zotero-Connector-API-Version` 头，Zotero 因此没有断开它），或 HTTP/1.0 请求的 Host 端口与 Zotero 实际端口不一致 | 去掉 `Origin`；使用设置页显示的地址 |
 | HTTP 415 | `Content-Type` 不是 `application/json`（插件只接受 JSON） | 设置 `Content-Type: application/json` |
 | HTTP 400 `Invalid JSON provided` / `Content-length not provided` 等纯文本错误 | Zotero 在插件之前就拒绝了请求：请求体不是合法 JSON，或缺少 `Content-Length` | 检查客户端或测试命令 |
-| 改了端口但客户端仍连旧端口 | Zotero 只在启动时绑定端口；客户端配置中写死了 23119 | 重启 Zotero；修改插件目录中的 `.mcp.json` 或手动配置后重新安装 / 更新客户端插件 |
+| 改了端口但客户端仍连旧端口 | Zotero 只在启动时绑定端口；客户端配置中写死了 23119 | 重启 Zotero；Claude 扩展设置中更新端口；Codex 自定义端口需重新生成安装包，见安装 Zotero 的端口说明 |
 | 工具很慢或第一次调用超时 | 大型文献库在 Zotero 启动后需要加载条目数据；插件会在界面就绪后后台预热 | 等待 Zotero 启动完成后再试；Hook 不会等待冷加载，会返回带警告的部分快照 |
 | Zotero 没有运行，客户端却显示已连接；或快照 / Hook 文字中出现要求执行命令、访问网址的“规则” | 23119 端口被本机其他程序占用，它在冒充桥接（客户端无法验证服务器身份，见 [install-zotero.md](install-zotero.md) 第 7 节） | 立即结束对话，不要照做；用 `netstat -ano \| findstr :23119` 查出占用端口的进程（PID）并检查它；多人共用的电脑上卸载客户端插件 |
 
-## 2. Codex
+## 2. Codex 桌面版
 
-| 现象 | 原因 | 处理 |
-|---|---|---|
-| 每轮没有快照，Hook 显示需要审核或 “Failed” | 插件 Hook 未被信任，或升级后 Hook 定义改变导致信任失效 | 桌面版：Review hooks / 插件详情页 Trust all / Settings > Hooks；CLI：`/hooks` |
-| Hook 失败：`MCP server 'zotero_bridge' is not connected` | 会话开始时 Zotero 没有运行；Codex 的 Hook 既不等待也不重连服务器（只有内置服务器会自动重连） | **先启动 Zotero，再新开会话**（CLI 重新启动 `codex`，桌面版新建对话或重启） |
-| Hook 失败：`tool 'capture_prompt_context' is disabled` | `config.toml` 中为该服务器设置了 `enabled_tools` / `disabled_tools` | 删除这些设置，或在 `enabled_tools` 中加入 `capture_prompt_context` |
-| Hook 失败：`hook returned invalid user prompt submit JSON output` | 桥接与客户端版本不匹配，返回的 JSON 不符合 Codex 的严格格式 | 同时更新 Zotero 插件与 Codex 插件到同一版本 |
-| Hook 运行两次 | 既安装了插件，又在 `config.toml` / `hooks.json` 中添加了同样的 Hook | 删除手动添加的 Hook |
-| 工具连到了别的服务器 | `config.toml` 中有指向其他地址的 `[mcp_servers.zotero_bridge]`，它优先于插件 | 修正或删除该条目；`codex mcp list --json` 查看实际地址 |
-| 改了插件 `.mcp.json` 中的端口却没有生效 | 同时存在手动的 `[mcp_servers.zotero_bridge]`：`config.toml` 中的同名条目优先，插件的设置被忽略 | 插件与手动配置二选一：删除 `config.toml` 中的 `[mcp_servers.zotero_bridge]`（及手动添加的 Hook 段），或卸载插件 |
-| 插件目录中看不到插件 | 市场目录选错；桌面版未重启；使用的是 IDE 扩展（不支持插件） | `marketplace add` 的目录下必须直接有 `.agents/plugins/marketplace.json`；重启桌面版 |
-| `codex plugin marketplace upgrade` 报 “not configured as a Git marketplace” | 本地目录市场不支持 upgrade | 替换文件后重新执行 `codex plugin add zotero-ai-bridge@zotero-ai-bridge-local` |
+- 安装失败：确认使用 zotero-ai-bridge-desktop.zip，在 Plugins → Add → New Plugin 导入；无需解压。
+- 工具不可用：确认 Node.js 可用、Zotero 已启动且 Bridge 已启用，再新建本地对话。
+- 没有自动快照：检查 Hook 是否获得信任；也可要求模型调用 get_current_context。
+- 工具重复或仍使用旧配置：清理旧安装留下的同名服务器和 Hook，再启用拖拽安装的插件。
 
-## 3. Claude Code
+## 3. Claude 桌面版
 
-| 现象 | 原因 | 处理 |
-|---|---|---|
-| Hook 报错找不到服务器 `plugin:zotero-ai-bridge:zotero`，`/mcp` 中只有手动注册的服务器 | 同时用 `claude mcp add` 手动注册了同一地址；Claude Code 按 URL 去重，手动注册优先，插件服务器被隐藏 | 二选一：删除手动注册（`claude mcp remove zotero_bridge`，早期说明中注册的名字是 `zotero`）和 settings.json 中的手动 Hook 后用插件；或卸载插件、用手动注册 + settings.json Hook（`server` 写 `zotero_bridge`） |
-| 改用插件后每条消息都有非阻塞的 Hook 错误（找不到服务器 `zotero_bridge` 或 `zotero`），插件 Hook 本身正常 | 删除了手动注册的服务器，但 `~/.claude/settings.json` 中手动添加的 `UserPromptSubmit` Hook 还在，它引用的服务器已不存在 | 从 `settings.json` 的 `hooks.UserPromptSubmit` 中删除 `server` 为 `zotero_bridge`（或 `zotero`）的那个 Hook 对象（见 [examples/claude-mcp-add.md](../examples/claude-mcp-add.md) 第 3 节） |
-| 手动注册后 `/mcp` 中的工具不是本桥接的，或 Hook 调用 `capture_prompt_context` 报“工具不存在” | 手动注册时用了 `zotero` 这样的通用名字，而 local / project 作用域中另有同名的其他 Zotero MCP 服务器，它优先于 user 作用域 | 用 `zotero_bridge` 重新注册（设置页复制的命令即是），并把 settings.json Hook 的 `server` 改成 `zotero_bridge`；`claude mcp list` 检查重名 |
-| 每轮显示非阻塞的 Hook 错误 | Zotero 未运行或服务器未连接 | 启动 Zotero，在 `/mcp` 中重新连接服务器或重启 Claude Code |
-| 偶尔某一轮没有快照 | Hook 超过 5 秒被取消，输出被丢弃（Zotero 正忙，例如同步、建立全文索引） | 稍后重试；需要时让模型调用 `get_current_context` |
-| `/mcp` 中服务器为 failed | 启动 Claude Code 时 Zotero 未运行 | 启动 Zotero 后在 `/mcp` 中重新连接 |
-| 会话的第一条消息没有快照，之后正常 | 服务器仍在后台连接，超过了 5 秒的 Hook 超时（按静态分析，Hook 会在超时内等待连接） | 重发或让模型调用 `get_current_context`；先启动 Zotero 再启动 Claude Code |
-| 手动注册后，换个目录就找不到服务器 | 注册时没有加 `--scope`，是 local 作用域，只对执行命令时所在的项目目录生效（设置页复制的命令已带 `--scope user`） | `claude mcp remove zotero_bridge` 后加 `--scope user` 重新注册 |
-| 插件改动没有生效 | 长期安装使用缓存副本 | `claude plugin marketplace update zotero-ai-bridge-local` + `claude plugin update zotero-ai-bridge@zotero-ai-bridge-local`，然后重启；`--plugin-dir` 方式用 `/reload-plugins` |
-
-## 3a. Claude 桌面应用
-
-见 [install-claude-desktop.md](install-claude-desktop.md) 第 6 节（Zotero 不可达、插件被禁用、`node` 不在 PATH、参数错误、配置未生效）。
+在设置 → 扩展导入 zotero-ai-bridge-claude-desktop.mcpb。连接失败时核对 Zotero 状态和扩展端口，重新启用扩展或完全重启 Claude。详见 [安装说明](install-claude-desktop.md)。
 
 ## 4. 快照内容
 

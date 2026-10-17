@@ -53,6 +53,7 @@ import {
 } from "./lib/layout.js";
 import { injectMarketplaceVersion, injectVersion, readPackageVersion } from "./lib/manifests.js";
 import { type ZipInputEntry, writeZipAtomic } from "./lib/zip.js";
+import { desktopPluginEntries } from "./package-desktop-plugin.js";
 
 export interface BuildOptions {
   /** Repository root; every input and output path is resolved against it. */
@@ -235,7 +236,7 @@ function stageTree(ctx: BuildContext, sourceDir: string, stageName: string, mani
   for (const rel of files) {
     const inner = relativeTo(sourceDir, rel);
     let data: Buffer | string = requireFile(ctx, rel);
-    if (inner === manifest) {
+    if (inner === manifest || (sourceDir === "packages/codex" && inner === "plugin.json")) {
       data = withVersion(ctx, rel, data);
     } else if ((MARKETPLACE_MANIFESTS as readonly string[]).includes(inner)) {
       data = injectMarketplaceVersion(data.toString("utf8"), PLUGIN_NAME, ctx.version, rel);
@@ -335,8 +336,11 @@ export async function runBuild(options: BuildOptions): Promise<BuildInfo> {
     await stageDesktop(ctx);
 
     await writeArchive(ctx, OUTPUT_NAMES.xpi, stagedEntries(ctx, STAGE_NAMES.zotero));
-    for (const client of CLIENT_PACKAGES) await writeArchive(ctx, client.archive, stagedEntries(ctx, client.id));
-    await writeArchive(ctx, OUTPUT_NAMES.claudeDesktop, stagedEntries(ctx, STAGE_NAMES.desktop));
+    const desktopEntries = stagedEntries(ctx, STAGE_NAMES.desktop);
+    const relay = desktopEntries.find((entry) => entry.name === DESKTOP_RELAY_OUT);
+    if (!relay) throw new Error("Missing staged desktop relay");
+    await writeArchive(ctx, OUTPUT_NAMES.codex, desktopPluginEntries(stagedEntries(ctx, "codex"), relay));
+    await writeArchive(ctx, OUTPUT_NAMES.claudeDesktop, desktopEntries);
     writeScienceDirectory(ctx);
     await writeArchive(ctx, OUTPUT_NAMES.source, sourceEntries(ctx));
 

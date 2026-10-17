@@ -454,7 +454,7 @@ export function hookFileProblems(hooksFile: Record<string, unknown>, expected: H
 }
 
 /** Problems with the one HTTP server a client plugin's .mcp.json must declare. */
-export function mcpConfigProblems(mcp: Record<string, unknown>, serverKey: string, client: "codex" | "claude-code"): string[] {
+export function mcpConfigProblems(mcp: Record<string, unknown>, serverKey: string, client: "codex" | "claude-code", desktop = false): string[] {
   const servers = mcp["mcpServers"];
   if (!isRecord(servers)) return [`"mcpServers" must be an object`];
   const keys = Object.keys(servers);
@@ -464,8 +464,15 @@ export function mcpConfigProblems(mcp: Record<string, unknown>, serverKey: strin
   const server = servers[serverKey];
   if (!isRecord(server)) return [`mcpServers.${serverKey} must be an object`];
   const problems: string[] = [];
-  if (server["type"] !== "http") problems.push(`mcpServers.${serverKey}.type must be "http"`);
-  if (server["url"] !== CANONICAL_URL) problems.push(`mcpServers.${serverKey}.url must be ${CANONICAL_URL}`);
+  if (desktop) {
+    if (server["type"] !== "stdio" || server["command"] !== "node" || server["cwd"] !== "${PLUGIN_ROOT}" ||
+        JSON.stringify(server["args"]) !== JSON.stringify(["${PLUGIN_ROOT}/server/zotero-relay.js"]) || "url" in server) {
+      problems.push("desktop MCP must launch the packaged stdio relay with node");
+    }
+  } else {
+    if (server["type"] !== "http") problems.push(`mcpServers.${serverKey}.type must be "http"`);
+    if (server["url"] !== CANONICAL_URL) problems.push(`mcpServers.${serverKey}.url must be ${CANONICAL_URL}`);
+  }
   if (client === "codex") {
     // The shipped plugin must not relax Codex's approval policy or embed a literal credential.
     for (const key of ["default_tools_approval_mode", "bearer_token"]) {
@@ -510,7 +517,7 @@ function pluginIdentityProblems(manifest: Record<string, unknown>, version: stri
   return problems;
 }
 
-export function codexPackageChecks(files: FileMap, version: string): CheckResult[] {
+export function codexPackageChecks(files: FileMap, version: string, desktop = false): CheckResult[] {
   const serverKey = CLIENT_SERVER_NAMES.codex;
   return [
     runCheck(".codex-plugin/plugin.json identity and paths", () => {
@@ -522,7 +529,21 @@ export function codexPackageChecks(files: FileMap, version: string): CheckResult
         ...(isRecord(ui) ? manifestPathProblems(ui, files, ["composerIcon", "logo"]).map((p) => `interface.${p}`) : []),
       ];
     }),
-    runCheck(`.mcp.json declares ${serverKey}`, () => mcpConfigProblems(readJsonObject(files, ".mcp.json"), serverKey, "codex")),
+    runCheck(`.mcp.json declares ${serverKey}`, () => mcpConfigProblems(readJsonObject(files, ".mcp.json"), serverKey, "codex", desktop)),
+    ...(desktop ? [runCheck("portable desktop manifest, MCP, relay and no marketplace", () => {
+      const manifest = readJsonObject(files, "plugin.json");
+      const overlay = readJsonObject(files, ".codex-plugin/plugin.json");
+      const mcp = readJsonObject(files, "mcp.json");
+      const problems = [...pluginIdentityProblems(manifest, version), ...mcpConfigProblems(mcp, serverKey, "codex", true)];
+      const extensions = manifest["extensions"];
+      const openai = isRecord(extensions) ? extensions["com.openai"] : undefined;
+      if (!isRecord(openai) || openai["requires_local_executor"] !== true || overlay["requires_local_executor"] !== true) problems.push("desktop execution must be declared");
+      if (manifest["$schema"] !== "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json" || mcp["$schema"] !== "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json") problems.push("portable schema declarations are missing");
+      if (readJsonObject(files, "server/package.json")["type"] !== "commonjs") problems.push("relay must use CommonJS");
+      if (!files.has(DESKTOP_RELAY_OUT)) problems.push("missing relay");
+      if ([...files.keys()].some((name) => name.endsWith("marketplace.json"))) problems.push("desktop archive must not include a marketplace");
+      return problems;
+    })] : []),
     runCheck("hooks/hooks.json UserPromptSubmit hook", () =>
       hookFileProblems(readJsonObject(files, "hooks/hooks.json"), {
         server: serverKey,

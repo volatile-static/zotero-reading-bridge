@@ -7,11 +7,7 @@
  * enforce a chrome CSP that blocks inline handlers.
  */
 import { ENDPOINT_ALIAS_PATH, ENDPOINT_PATH, endpointUrl } from "../../../shared/types/bridge.js";
-import { CLIENT_SERVER_NAMES } from "../../../shared/types/hook.js";
 import {
-  claudeCodeAddCommand,
-  claudeCodeHookSettingsJson,
-  codexConfigToml,
   type BridgePaneApi,
   type BridgeState,
   type BridgeStatusKind,
@@ -28,7 +24,7 @@ const STATUS_MESSAGE_IDS: Record<BridgeStatusKind, string> = {
 };
 
 /** Copy buttons that need a known port; the hook settings do not depend on the address. */
-const ADDRESS_BUTTON_IDS = ["zab-copy-address", "zab-copy-codex", "zab-copy-claude"] as const;
+const ADDRESS_BUTTON_IDS = ["zab-copy-address"] as const;
 
 function bridgeApi(): BridgePaneApi | undefined {
   // Published on the shared Zotero object by the running plugin (src/main.ts) and removed on shutdown.
@@ -44,9 +40,6 @@ class BridgePane {
 
   init(): void {
     this.onCommand("zab-copy-address", () => this.address(ENDPOINT_PATH));
-    this.onCommand("zab-copy-codex", () => this.withAddress(codexConfigToml));
-    this.onCommand("zab-copy-claude", () => this.withAddress(claudeCodeAddCommand));
-    this.onCommand("zab-copy-claude-hook", () => claudeCodeHookSettingsJson(CLIENT_SERVER_NAMES.claudeCodeManual));
     // Zotero fires `unload` when the window closes.
     this.root.addEventListener("unload", () => clearTimeout(this.copiedTimer), { once: true });
     // Rendered once: the bridge state is fixed for as long as this pane exists (see BridgePaneApi).
@@ -71,11 +64,6 @@ class BridgePane {
   private address(path: string): string | null {
     const port = this.state?.port ?? null;
     return port === null ? null : endpointUrl(port, path);
-  }
-
-  private withAddress(render: (url: string) => string): string | null {
-    const url = this.address(ENDPOINT_PATH);
-    return url === null ? null : render(url);
   }
 
   private showCopied(): void {

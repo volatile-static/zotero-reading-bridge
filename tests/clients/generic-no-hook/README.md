@@ -10,7 +10,7 @@
 
 1. `npm run build`、`npm run verify`；按 [install-zotero.md](../../../docs/install-zotero.md) 安装 XPI，设置页状态为
    “运行中，地址 127.0.0.1:23119”。
-2. 测试数据与 [Codex 脚本](../codex/README.md) 第 0 节相同：论文 A、B，A 带有文字层的 PDF。另准备一篇附件文件缺失的条目 C
+2. 准备测试数据：论文 A、B，A 带有文字层的 PDF。另准备一篇附件文件缺失的条目 C
    （例如把一个链接文件附件指向的文件改名）。
 3. 无 Hook 技能：构建产物 `outputs/claude-science-zotero-skill/skills/zotero/SKILL.md`（源文件
    `integrations/claude-science/skills/zotero/SKILL.md`，构建时已展开 include 标记）。
@@ -45,49 +45,11 @@ $r.result.content[0].text | ConvertFrom-Json | ConvertTo-Json -Depth 10
 
 再取消所有选择（或选中文献库根节点）执行最后一条，`status` 应为 `"empty"`。
 
-## 2. 真实的无 Hook 客户端（G-3、W-1 – W-4、N-1、N-2）
+## 2. Claude 桌面版无 Hook 验收
 
-任何能在本机连接 MCP Streamable HTTP 服务器的客户端都可以使用（地址见上，无认证，不能带浏览器 `Origin`）。下面以
-**手动注册、不加 Hook 的 Claude Code** 为例，它与 Claude Science 一样只能靠技能和模型主动调用。
+按 [安装说明](../../../docs/install-claude-desktop.md) 拖入 MCPB，新建对话后验证 get_status 和 get_current_context。选择论文 A 后询问当前论文，再改选 B 重新询问，检查 libraryID 和 key 随选择更新。点名 A 时应检索 A，而非误用当前 B。全文读取优先 get_fulltext，缺失时按需取得附件路径；附件 C 缺失时如实报告。
 
-1. 如果装过 Claude Code 插件，先临时禁用（插件与手动注册不能并存）：
-
-   ```powershell
-   claude plugin disable zotero-ai-bridge@zotero-ai-bridge-local
-   ```
-
-2. 新建一个只用于本测试的目录，放入无 Hook 技能，并只在这个目录中注册服务器（local 作用域，不写 Hook）：
-
-   ```powershell
-   $test = Join-Path $env:USERPROFILE 'zab-nohook-test'
-   New-Item -ItemType Directory -Force (Join-Path $test '.claude\skills\zotero') | Out-Null
-   Copy-Item '<仓库目录>\outputs\claude-science-zotero-skill\skills\zotero\SKILL.md' (Join-Path $test '.claude\skills\zotero\SKILL.md')
-   Set-Location $test
-   claude mcp add --transport http zotero_bridge http://127.0.0.1:23119/bridge/mcp
-   claude
-   ```
-
-3. **G-3**：`/mcp` 中 `zotero_bridge` 已连接，18 个工具；`/hooks` 中没有 Zotero 相关 Hook。
-4. **W-1**：在 Zotero 中选中论文 A，发送“总结一下这篇论文”。
-   - 模型在本轮先调用 `get_current_context`，再用返回的 libraryID + key 调用 `get_items` 等工具；回答针对 A。
-5. **W-2**：在 Zotero 中改选 B，发送“那这篇呢？”
-   - 模型**重新**调用 `get_current_context`，回答针对 B，没有沿用上一轮的结果。
-6. **W-3**：取消所有选择，发送“这篇论文讲什么？”→ 模型说明当前没有选中任何条目，请你选中或按标题搜索；
-   然后退出 Zotero 再问一次 → 模型说明 Zotero 不可用（可能建议 `get_status`），不猜测。之后重新启动 Zotero。
-7. **W-4**：检查以上各轮的工具调用，模型从未调用 `capture_prompt_context`。
-8. **N-1**：选中 A，发送“读取这篇论文的 PDF，告诉我实验用了哪些数据集”。
-   - 模型调用 `get_current_context` → `get_attachment_path`，再用客户端自己的工具（这里是 Read）读取 PDF 并回答。
-9. **N-2**：选中 C，发送“读取这篇论文的 PDF 全文”。
-   - 模型根据 `exists: false` 和 `note` 说明文件不在本机，**不**编造内容。
-
-清理：
-
-```powershell
-claude mcp remove zotero_bridge
-Set-Location $env:USERPROFILE
-Remove-Item -Recurse -Force (Join-Path $env:USERPROFILE 'zab-nohook-test')
-claude plugin enable zotero-ai-bridge@zotero-ai-bridge-local   # 如果第 1 步禁用过插件
-```
+卸载通过设置 → 扩展完成。
 
 ## 3. Claude Science（G-4、W-5、N-3）
 
@@ -95,7 +57,7 @@ claude plugin enable zotero-ai-bridge@zotero-ai-bridge-local   # 如果第 1 步
 Claude Science 更新后，按该文件“如何复测”一节逐步操作：
 
 - 连接器被拒绝：在 G-4 的“证据”中记录完整的错误文字与版本，状态保持不变，W-5、N-3 不再执行。
-- 连接器被接受：G-4 记为“通过”，再按本文件第 2 节第 4–9 步执行 W-5、N-3（导入同一个无 Hook 技能），并检查
+- 连接器被接受：G-4 记为“通过”，再按本文件第 2 节的工作流执行 W-5、N-3（导入同一个无 Hook 技能），并检查
   `%LOCALAPPDATA%\ClaudeScience\desktop-launch.log` 中是否新增 `denied 127.0.0.1:23119` 行。
 - 两种情况都按“如何复测”第 6 步，用 Zotero 调试日志记录原计划要求实测的三项：请求是否到达 Zotero（回环可达性）、是否带 `Origin`
   请求头或 `Mozilla/` User-Agent（Zotero 的 `Preventing request from browser` 或插件的 403）、是否接受 JSON-only 响应。

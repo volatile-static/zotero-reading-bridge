@@ -14,6 +14,7 @@ import {
   type CheckResult,
   type FileMap,
   claudeDesktopPackageChecks,
+  claudeSkillChecks,
   codexPackageChecks,
   runCheck,
   xpiPackageChecks,
@@ -83,7 +84,7 @@ function inventoryProblems(outputsDir: string): string[] {
   if (!fs.existsSync(outputsDir)) return [`${OUTPUTS_DIR}/ does not exist (run npm run build)`];
   const problems: string[] = [];
   const present = new Map(fs.readdirSync(outputsDir, { withFileTypes: true }).map((d) => [d.name, d]));
-  const expected: readonly string[] = [...ARCHIVES, OUTPUT_NAMES.buildInfo];
+  const expected: readonly string[] = [...ARCHIVES, OUTPUT_NAMES.claudeSkill, OUTPUT_NAMES.buildInfo];
   for (const name of expected) {
     const entry = present.get(name);
     if (!entry) problems.push(`missing ${name}`);
@@ -269,6 +270,12 @@ export async function verifyPackage(options: VerifyOptions): Promise<VerifyRow[]
     add(OUTPUT_NAMES.claudeDesktop, claudeDesktopPackageChecks(desktop, meta));
     const relay = desktop.get(RELAY_OUT);
     if (relay) rows.push({ group: OUTPUT_NAMES.claudeDesktop, ...(await relaySmokeCheck(relay)) });
+  }
+  const skillPath = path.join(outputsDir, OUTPUT_NAMES.claudeSkill);
+  if (fs.existsSync(skillPath)) {
+    const skill = fs.readFileSync(skillPath);
+    contents.push({ label: OUTPUT_NAMES.claudeSkill, files: new Map([[OUTPUT_NAMES.claudeSkill, skill]]) });
+    add(OUTPUT_NAMES.claudeSkill, claudeSkillChecks(skill));
   }
   const source = await readArchive(outputsDir, OUTPUT_NAMES.source, rows);
   if (source) {

@@ -4,7 +4,7 @@
  *   npm run build      (tsx scripts/build.ts)
  *
  * One run packages all three plugins: the Zotero XPI, the Codex ZIP and the Claude Desktop MCPB (the last two carry
- * the same relay bundle), plus source.zip. package.json supplies the metadata every manifest shares.
+ * the same relay bundle), plus the plain Claude Desktop SKILL.md and source.zip. package.json supplies the metadata every manifest shares.
  *
  * Only work/stage and outputs/ are ever deleted. Any failure (including a failed package check) removes outputs/
  * entirely, so a failed build never leaves a complete-looking package behind; archives are written as *.partial and
@@ -30,6 +30,7 @@ import {
 } from "./lib/files.js";
 import { expandIncludes, findIncludeMarkers } from "./lib/includes.js";
 import {
+  CLAUDE_SKILL_SOURCE,
   CODEX_MCP_CONFIG,
   CODEX_PLUGIN,
   CODEX_PORTABLE_MANIFEST,
@@ -236,6 +237,14 @@ function stageCodex(ctx: BuildContext, relay: string): void {
   stage(ctx, CODEX_PLUGIN, CODEX_PORTABLE_MCP_CONFIG, serializeJson(portableMcpConfig(mcp)));
 }
 
+/** Claude Desktop skill: the single SKILL.md with includes expanded, written to outputs/ unzipped. */
+function claudeSkillText(ctx: BuildContext): string {
+  const expanded = expandIncludes(requireFile(ctx, CLAUDE_SKILL_SOURCE).toString("utf8"), CLAUDE_SKILL_SOURCE, includeLoader(ctx));
+  const leftover = findIncludeMarkers(expanded);
+  if (leftover.length > 0) throw new Error(`${CLAUDE_SKILL_SOURCE}: unresolved include markers at lines ${leftover.join(", ")}`);
+  return expanded;
+}
+
 // ---------------------------------------------------------------------------------------------- packaging
 
 function stagedEntries(ctx: BuildContext, plugin: PluginSpec): ZipInputEntry[] {
@@ -299,6 +308,8 @@ export async function runBuild(options: BuildOptions): Promise<BuildInfo> {
       stage(ctx, plugin, "LICENSE", license);
       await writeArchive(ctx, plugin.archive, stagedEntries(ctx, plugin));
     }
+    fs.writeFileSync(path.join(outputsDir, OUTPUT_NAMES.claudeSkill), claudeSkillText(ctx));
+    log(`wrote ${OUTPUTS_DIR}/${OUTPUT_NAMES.claudeSkill}`);
     await writeArchive(ctx, OUTPUT_NAMES.source, sourceEntries(ctx));
 
     const info: BuildInfo = {

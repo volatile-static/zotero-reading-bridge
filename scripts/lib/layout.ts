@@ -80,6 +80,7 @@ export const OUTPUT_NAMES = {
   xpi: `${BRIDGE_NAME}.xpi`,
   codex: `${BRIDGE_NAME}-codex.zip`,
   claudeDesktop: `${BRIDGE_NAME}-claude-desktop.mcpb`,
+  claudeSkill: "SKILL.md",
   source: "source.zip",
   buildInfo: "BUILD-INFO.json",
 } as const;
@@ -113,6 +114,12 @@ export const CODEX_PORTABLE_MANIFEST = "plugin.json";
 export const CODEX_PORTABLE_MCP_CONFIG = "mcp.json";
 
 export const DESKTOP_REQUIRED_FILES = [DESKTOP_PLUGIN.manifest, RELAY_OUT, "README.md", "LICENSE"] as const;
+
+/**
+ * Claude Desktop skill (Settings -> Capabilities -> Skills -> Upload skill): an .mcpb cannot carry skills, so the
+ * skill ships as a plain SKILL.md (includes expanded) in outputs/, uploaded as it is.
+ */
+export const CLAUDE_SKILL_SOURCE = "packages/claude-skill/zotero/SKILL.md";
 
 export const SKILL_FILE = "skills/zotero/SKILL.md";
 export const SKILL_NAME = "zotero";

@@ -632,3 +632,7 @@ export function claudeDesktopPackageChecks(files: FileMap, meta: PackageMetadata
     ),
   ];
 }
+
+export function claudeSkillChecks(skill: Buffer): CheckResult[] {
+  return [runCheck("SKILL.md front matter", () => skillProblems(new Map([["SKILL.md", skill]]), "SKILL.md"))];
+}

@@ -13,7 +13,7 @@ The bridge is **read-only**. It never changes, deletes or uploads anything in yo
 - **Claude Desktop** or the **Codex** desktop app
 - These installation files:
   - `zotero-reading-bridge.xpi` for Zotero
-  - `zotero-reading-bridge-claude-desktop.mcpb` for Claude Desktop
+  - `zotero-reading-bridge-claude-desktop.mcpb` for Claude Desktop, plus the optional but recommended `SKILL.md`
   - `zotero-reading-bridge-codex.zip` for Codex
 
 ## Install
@@ -27,10 +27,19 @@ The bridge is **read-only**. It never changes, deletes or uploads anything in yo
 **2. Your AI assistant** (one or both)
 
 - **Claude Desktop:** open **Settings → Extensions**, drag in `zotero-reading-bridge-claude-desktop.mcpb` and click
-  **Install**.
+  **Install**. This extension provides the connection and tools needed to read Zotero.
 - **Codex:** open **Customize → Plugins → Add → New Plugin**, drag in `zotero-reading-bridge-codex.zip` and click
-  **Add plugin**. If Codex asks you to review hooks, approve them. Codex needs [Node.js](https://nodejs.org) installed
-  on your computer.
+  **Add plugin**. If Codex asks you to review hooks, approve them.
+
+**Optional, recommended for Claude: install the Zotero skill.** Open **Settings → Capabilities → Skills**, click
+**Upload skill** and choose `SKILL.md`. Upload the file directly; no ZIP is needed. The Claude extension does not
+bundle this skill, so it is installed separately. Codex already includes it in its plugin.
+
+The extension works without the skill: Claude can still search your library and read papers, notes and annotations.
+The skill adds a consistent research workflow: refresh the current selection whenever you ask about “this paper,”
+read the full text before answering document questions, identify sources, and explain when text or files cannot be
+accessed. It adds instructions, not extra tools or permissions, and does not replace the extension. If you install
+it, upload the new `SKILL.md` when updating the extension as well.
 
 You don't need to unzip anything or edit any settings.
 

@@ -37,6 +37,7 @@ import {
   sourceArchivePrefix,
 } from "./lib/layout.js";
 import { type PackageMetadata, isRecord, readPackageMetadata } from "./lib/manifests.js";
+import { createUpdateManifest } from "./lib/updates.js";
 import {
   ABSOLUTE_PATH_RULES,
   SECRET_RULES,
@@ -84,7 +85,7 @@ function inventoryProblems(outputsDir: string): string[] {
   if (!fs.existsSync(outputsDir)) return [`${OUTPUTS_DIR}/ does not exist (run npm run build)`];
   const problems: string[] = [];
   const present = new Map(fs.readdirSync(outputsDir, { withFileTypes: true }).map((d) => [d.name, d]));
-  const expected: readonly string[] = [...ARCHIVES, OUTPUT_NAMES.claudeSkill, OUTPUT_NAMES.buildInfo];
+  const expected: readonly string[] = [...ARCHIVES, OUTPUT_NAMES.claudeSkill, OUTPUT_NAMES.buildInfo, OUTPUT_NAMES.updates];
   for (const name of expected) {
     const entry = present.get(name);
     if (!entry) problems.push(`missing ${name}`);
@@ -253,6 +254,14 @@ export async function verifyPackage(options: VerifyOptions): Promise<VerifyRow[]
   if (xpi) {
     contents.push({ label: OUTPUT_NAMES.xpi, files: xpi });
     add(OUTPUT_NAMES.xpi, xpiPackageChecks(xpi, version));
+    add(OUTPUT_NAMES.updates, [runCheck("update matches XPI metadata, release URL and SHA-256", () => {
+      const manifest = JSON.parse(xpi.get("manifest.json")!.toString("utf8"));
+      const actual = JSON.parse(fs.readFileSync(path.join(outputsDir, OUTPUT_NAMES.updates), "utf8"));
+      const bytes = fs.readFileSync(path.join(outputsDir, OUTPUT_NAMES.xpi));
+      return [version, `v${version}`].some((tag) =>
+        JSON.stringify(actual) === JSON.stringify(createUpdateManifest(manifest, bytes, tag)))
+        ? [] : ["updates.json does not match the packaged XPI"];
+    })]);
   }
   const codex = await readArchive(outputsDir, OUTPUT_NAMES.codex, rows);
   if (codex) {

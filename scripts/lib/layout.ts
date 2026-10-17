@@ -83,6 +83,7 @@ export const OUTPUT_NAMES = {
   claudeSkill: "SKILL.md",
   source: "source.zip",
   buildInfo: "BUILD-INFO.json",
+  updates: "updates.json",
 } as const;
 
 /**

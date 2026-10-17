@@ -96,7 +96,7 @@ describe("manifest.json", () => {
     assert.equal(manifest.manifest_version, 2);
     assert.deepEqual(manifest.applications.zotero, {
       id: ZOTERO_ADDON_ID,
-      update_url: "https://zotero-reading-bridge.invalid/update.json",
+      update_url: "https://github.com/volatile-static/zotero-reading-bridge/releases/latest/download/updates.json",
       strict_min_version: "10.999",
       strict_max_version: "11.*",
     });

@@ -234,7 +234,9 @@ console.log(snapshot);
 1. 更新版本号，例如运行 `npm version 0.2.1 --no-git-tag-version`，同步修改 `package.json` 和 `package-lock.json`。插件清单中的版本由构建自动写入。
 2. 提交并推送代码（首次使用时也要包含 `.github/workflows/release.yml`）。
 3. 在 GitHub 的 **Releases → Draft a new release** 中，选择这次提交并创建与版本号一致的标签，例如 `v0.2.1`（也接受 `0.2.1`），填写说明后点击 **Publish release**。无需手动上传附件。
-4. 在 **Actions → Release packages** 查看执行结果。成功后，该 Release 的 Assets 会出现三个安装包、`source.zip` 和 `BUILD-INFO.json`（包含包大小及 SHA-256）。
+4. 在 **Actions → Release packages** 查看执行结果。成功后，该 Release 的 Assets 会出现三个安装包、`SKILL.md`、`source.zip`、`updates.json` 和 `BUILD-INFO.json`（包含包大小及 SHA-256）。
+
+`updates.json` 由构建根据 XPI 自动生成，下载地址固定到本次标签，包含 XPI 的 SHA-256 与 Zotero 兼容范围。Zotero 的 `update_url` 指向最新正式 Release 的此附件，预发布版不会进入此更新入口。0.2.1 及更早版本使用占位地址，需要手动安装一次 0.2.2 或更新版本。
 
 工作流使用 GitHub 自动提供的 `GITHUB_TOKEN`，无需配置个人访问令牌；仓库须启用 GitHub Actions，并允许工作流声明的 `contents: write` 权限。
 

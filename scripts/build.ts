@@ -63,6 +63,7 @@ import {
   serializeJson,
 } from "./lib/manifests.js";
 import { typecheck } from "./lib/typecheck.js";
+import { createUpdateManifest } from "./lib/updates.js";
 import { type ZipInputEntry, writeZipAtomic } from "./lib/zip.js";
 import { formatReport, verifyPackage } from "./verify-package.js";
 
@@ -309,6 +310,9 @@ export async function runBuild(options: BuildOptions): Promise<BuildInfo> {
       await writeArchive(ctx, plugin.archive, stagedEntries(ctx, plugin));
     }
     fs.writeFileSync(path.join(outputsDir, OUTPUT_NAMES.claudeSkill), claudeSkillText(ctx));
+    const zoteroManifest = parseJsonObject(fs.readFileSync(path.join(stageDir, ZOTERO_PLUGIN.id, "manifest.json"), "utf8"), "manifest.json");
+    const updates = createUpdateManifest(zoteroManifest, fs.readFileSync(path.join(outputsDir, OUTPUT_NAMES.xpi)), process.env["RELEASE_TAG"]);
+    fs.writeFileSync(path.join(outputsDir, OUTPUT_NAMES.updates), serializeJson(updates));
     log(`wrote ${OUTPUTS_DIR}/${OUTPUT_NAMES.claudeSkill}`);
     await writeArchive(ctx, OUTPUT_NAMES.source, sourceEntries(ctx));
 

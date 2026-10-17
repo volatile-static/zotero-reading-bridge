@@ -201,8 +201,9 @@ Zotero 自带的本机 HTTP 服务器上注册一个无状态的 MCP 端点；�
     后台在界面就绪后按顺序预热；Hook 路径绝不等待冷加载，读不到时返回部分快照并给出警告。
 13. **本地化文件名**：使用 `locale/en-US/zotero-reading-bridge.ftl` 与 `locale/zh-CN/zotero-reading-bridge.ftl`，所有消息 id 以 `zotero-reading-bridge-` 开头。
 14. **清单**：`manifest_version: 2`，`applications.zotero.id = zotero-reading-bridge@volatile.static`，`strict_min_version: 10.999`
-    （让 11.0 beta 也能安装）、`strict_max_version: 11.*`；`update_url` 是 Zotero 要求的必填字段，填写永远无法解析的
-    `https://zotero-reading-bridge.invalid/update.json`，不发布任何更新。
+    （让 11.0 beta 也能安装）、`strict_max_version: 11.*`；`update_url` 指向
+    `https://github.com/volatile-static/zotero-reading-bridge/releases/latest/download/updates.json`。
+    构建从 XPI 清单和实际安装包生成更新清单，包含版本、兼容范围、固定版本下载地址与 SHA-256，并随 Release 上传。
 15. （已移除：Claude Science 与通用无 Hook 技能已停止维护。）
 16. **不声明 `outputSchema`**：MCP 规定声明了 `outputSchema` 的工具在每个成功结果中都必须带符合该 Schema 的 `structuredContent`，
     客户端（例如官方 TypeScript SDK）会校验，不符合就把整个调用当作失败；而 Hook 路径只读取 text 内容，忽略

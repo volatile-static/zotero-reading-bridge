@@ -720,7 +720,7 @@ function xpiFiles(overrides: Record<string, string | object> = {}): FileMap {
       applications: {
         zotero: {
           id: "zotero-reading-bridge@volatile.static",
-          update_url: "https://zotero-reading-bridge.invalid/update.json",
+          update_url: "https://github.com/volatile-static/zotero-reading-bridge/releases/latest/download/updates.json",
           strict_min_version: "10.999",
           strict_max_version: "11.*",
         },

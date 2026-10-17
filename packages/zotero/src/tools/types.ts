@@ -6,7 +6,7 @@ import type { ImageContent, TextContent, ToolDefinition, ToolErrorCode } from ".
 export interface ToolCallContext {
   /** Negotiated (or header-derived) MCP protocol version of the request. */
   protocolVersion: string;
-  /** Endpoint path the request arrived on (/bridge/mcp or the /codex/mcp alias). */
+  /** Endpoint path the request arrived on (/bridge/mcp). */
   endpointPath: string;
 }
 

@@ -5,7 +5,7 @@ description: "Use when the user asks about papers, references, citations, notes,
 
 # Zotero (Codex)
 
-This plugin connects Codex to the Zotero AI Bridge running inside the user's Zotero desktop app on this computer.
+This plugin connects Codex to the Zotero Reading Bridge running inside the user's Zotero desktop app on this computer.
 Its MCP server is registered as `zotero_bridge`, so the tools appear as `mcp__zotero_bridge__<tool>` (for example
 `mcp__zotero_bridge__search_items`). Everything is read-only.
 

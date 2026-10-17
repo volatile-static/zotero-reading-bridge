@@ -26,9 +26,9 @@ export const ZOTERO_COPY_DIRS = ["content", "locale"] as const;
 
 /**
  * The one global content/bridge.js publishes on the bootstrap sandbox it shares with bootstrap.js: src/main.ts
- * assigns `globalThis.ZoteroAIBridgeMain`, bootstrap.ts calls it and deletes it on shutdown.
+ * assigns `globalThis.ZoteroReadingBridgeMain`, bootstrap.ts calls it and deletes it on shutdown.
  */
-export const MAIN_GLOBAL_NAME = "ZoteroAIBridgeMain";
+export const MAIN_GLOBAL_NAME = "ZoteroReadingBridgeMain";
 
 export interface BundleSpec {
   id: "bootstrap" | "main" | "preferences";
@@ -71,8 +71,8 @@ export const XPI_REQUIRED_FILES = [
   "content/bridge.js",
   "content/preferences.js",
   "content/preferences.xhtml",
-  "locale/en-US/zotero-ai-bridge.ftl",
-  "locale/zh-CN/zotero-ai-bridge.ftl",
+  "locale/en-US/zotero-reading-bridge.ftl",
+  "locale/zh-CN/zotero-reading-bridge.ftl",
 ] as const;
 export const XPI_LOCALES = ["en-US", "zh-CN"] as const;
 
@@ -109,7 +109,7 @@ export const DESKTOP_MANIFEST = "manifest.json";
 export const DESKTOP_RELAY_ENTRY = "packages/claude-desktop/src/main.ts";
 /** Path of the bundled relay inside the .mcpb (manifest server.entry_point). */
 export const DESKTOP_RELAY_OUT = "server/zotero-relay.js";
-export const DESKTOP_REQUIRED_FILES = [DESKTOP_MANIFEST, DESKTOP_RELAY_OUT, "README.md"] as const;
+export const DESKTOP_REQUIRED_FILES = [DESKTOP_MANIFEST, DESKTOP_RELAY_OUT, "README.md", "LICENSE"] as const;
 /** Oldest Node the relay bundle targets (manifest compatibility.runtimes.node). */
 export const DESKTOP_NODE_TARGET = "node18";
 

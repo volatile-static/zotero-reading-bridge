@@ -1,12 +1,12 @@
 /**
  * Privacy check of the bridge's own Zotero debug lines (DESIGN decision 14), run on the debug output of a
- * `--debug-output` harness run after shutdown: every "[Zotero AI Bridge]" line must be one of the known
+ * `--debug-output` harness run after shutdown: every "[Zotero Reading Bridge]" line must be one of the known
  * content-free summaries (method, JSON-RPC method, tool, status, sizes, timing, lifecycle) and must not
  * contain any fixture text. Zotero's own request logging is out of scope (it is documented behaviour).
  */
 import { ANNOTATIONS, ATTACHMENTS, COLLECTIONS, ITEMS } from "../fixtures/data.js";
 
-const MARKER = "[Zotero AI Bridge]";
+const MARKER = "[Zotero Reading Bridge]";
 
 const ALLOWED: readonly RegExp[] = [
   // endpoint.ts logRequest()
@@ -14,10 +14,10 @@ const ALLOWED: readonly RegExp[] = [
   // endpoint.ts logFilter for Zotero's response logging
   /^response \d{3} \(\d+ bytes, body redacted\)$/,
   /^unexpected [A-Za-z0-9_./-]{1,64} while handling a request$/,
-  /^replacing an existing endpoint at \/(bridge|codex)\/mcp$/,
+  /^replacing an existing endpoint at \/bridge\/mcp$/,
   // main.ts lifecycle lines
   /^could not verify that Zotero's HTTP server binds 127\.0\.0\.1 only; endpoints stay off$/,
-  /^serving \/bridge\/mcp and \/codex\/mcp on 127\.0\.0\.1:\d+$/,
+  /^serving \/bridge\/mcp on 127\.0\.0\.1:\d+$/,
   /^endpoints unregistered$/,
   /^shutting down \(reason \d+\)$/,
   /^item pre-warm stopped: [A-Za-z0-9_./-]{1,64}$/,

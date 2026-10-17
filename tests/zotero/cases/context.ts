@@ -297,7 +297,7 @@ export const contextCases: TestCase[] = [
     title: "Codex hook arguments produce the exact hook JSON with session/turn ids",
     requires: ["bridge", "fixtures"],
     async run(ctx) {
-      const hook = await captureHook(ctx.mcp("/codex/mcp", "2025-06-18"), { client: "codex", session_id: "thread-123", turn_id: "turn-456" });
+      const hook = await captureHook(ctx.mcp("/bridge/mcp", "2025-06-18"), { client: "codex", session_id: "thread-123", turn_id: "turn-456" });
       const snap = hook.snapshot;
       assert.equal(snap.client, "codex");
       assert.equal(snap.sessionId, "thread-123");

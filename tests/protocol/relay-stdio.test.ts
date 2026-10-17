@@ -54,7 +54,7 @@ describe("MCP SDK stdio client -> relay -> Zotero-like server", () => {
     const port = closed.port;
     await closed.close();
     const client = new Client({ name: "relay-test", version: "0.0.0" });
-    await assert.rejects(client.connect(relayTransport(port)), /Cannot reach the Zotero AI Bridge/);
+    await assert.rejects(client.connect(relayTransport(port)), /Cannot reach the Zotero Reading Bridge/);
     await client.close();
   });
 });

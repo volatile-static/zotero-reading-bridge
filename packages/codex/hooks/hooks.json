@@ -1,5 +1,5 @@
 {
-  "description": "Zotero AI Bridge: attach the current Zotero selection to each prompt (read-only)",
+  "description": "Zotero Reading Bridge: attach the current Zotero selection to each prompt (read-only)",
   "hooks": {
     "UserPromptSubmit": [
       {

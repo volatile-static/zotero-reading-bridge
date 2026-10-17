@@ -1,9 +1,10 @@
 {
-  "name": "zotero-ai-bridge",
+  "name": "zotero-reading-bridge",
   "version": "0.2.0",
   "private": true,
-  "description": "Zotero AI Bridge: read-only Zotero MCP endpoint plus Codex and Claude Code client plugins",
-  "license": "MIT",
+  "description": "Zotero Reading Bridge: read-only Zotero MCP endpoint plus Codex and Claude Code client plugins",
+  "license": "GPL-3.0-or-later",
+  "author": "volatile-static",
   "type": "module",
   "engines": {
     "node": ">=22.12"

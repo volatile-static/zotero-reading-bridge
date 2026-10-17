@@ -1,10 +1,10 @@
 # 第三方声明（Third-Party Notices）
 
-Zotero AI Bridge 本身以 MIT 许可证发布（见 `LICENSE`）。
+Zotero Reading Bridge 本身以 GNU GPL v3 或更新版本（GPL-3.0-or-later）许可证发布（见 `LICENSE`）。
 
 ## 发布产物中不包含第三方代码
 
-`outputs/` 中的发布产物（Zotero 插件 `zotero-ai-bridge.xpi`、Codex 插件包、Claude Code 插件包、Claude Science 技能目录）
+`outputs/` 中的发布产物（Zotero 插件 `zotero-reading-bridge.xpi`、Codex 插件包、Claude Code 插件包、Claude Science 技能目录）
 只包含本项目自己的代码、配置和文档。下表中的依赖全部是**开发依赖**，只在构建、类型检查和测试时使用，不会被打包进任何产物：
 esbuild 只打包本仓库内的 TypeScript 源文件，Zotero 插件运行时没有任何 npm 运行时依赖。
 

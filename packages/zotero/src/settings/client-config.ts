@@ -22,7 +22,7 @@ export interface BridgeState {
 }
 
 /**
- * Published as Zotero.ZoteroAIBridge while the plugin runs (see src/main.ts). The state is settled before the
+ * Published as Zotero.ZoteroReadingBridge while the plugin runs (see src/main.ts). The state is settled before the
  * pane is registered and stays fixed until shutdown, which unregisters the pane (Zotero then reloads open
  * preferences windows), so the pane reads it once.
  */

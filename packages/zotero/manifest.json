@@ -1,17 +1,17 @@
 {
   "manifest_version": 2,
-  "name": "Zotero AI Bridge",
+  "name": "Zotero Reading Bridge",
   "version": "0.2.0",
   "description": "Read-only local MCP endpoint that lets AI clients such as Codex and Claude Code read your Zotero library and current selection.",
-  "author": "Zotero AI Bridge contributors",
+  "author": "volatile-static",
   "icons": {
     "48": "content/icons/icon.svg",
     "96": "content/icons/icon.svg"
   },
   "applications": {
     "zotero": {
-      "id": "zotero-ai-bridge@zotero-ai-bridge.local",
-      "update_url": "https://zotero-ai-bridge.invalid/update.json",
+      "id": "zotero-reading-bridge@zotero-reading-bridge.local",
+      "update_url": "https://zotero-reading-bridge.invalid/update.json",
       "strict_min_version": "10.999",
       "strict_max_version": "11.*"
     }

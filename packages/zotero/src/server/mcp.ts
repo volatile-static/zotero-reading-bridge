@@ -36,7 +36,7 @@ export type { BridgeHttpResponse } from "./response.js";
 
 export interface BridgeHttpRequest {
   method: string;
-  /** Endpoint path without query string (/bridge/mcp or /codex/mcp). */
+  /** Endpoint path without query string (/bridge/mcp). */
   path: string;
   /** Request headers with lowercase names. */
   headers: Record<string, string | undefined>;

@@ -10,7 +10,7 @@ import { errorMessage, waitFor } from "./util.js";
 const PREF_WINDOW_TYPE = "zotero:pref";
 /** plugins.js PLUGIN_L10N_SOURCE_NAME: every plugin's FTL is merged into this one L10nRegistry source. */
 const PLUGIN_L10N_SOURCE = "zotero-plugins";
-const PLUGIN_FTL_RESOURCE = "zotero-ai-bridge.ftl";
+const PLUGIN_FTL_RESOURCE = "zotero-reading-bridge.ftl";
 const PANE_TIMEOUT_MS = 20000;
 
 interface RegisteredPane {
@@ -54,7 +54,6 @@ function paneState(win: any, paneID: string): PaneState | null {
     elements: [...container.querySelectorAll("[data-l10n-id]")].map(elementState),
     status: status ? { l10nId: status.getAttribute("data-l10n-id"), text: (status.textContent ?? "").trim() } : null,
     address: byId("zab-address")?.value ?? null,
-    alias: byId("zab-alias")?.value ?? null,
     buttonsDisabled,
   };
 }

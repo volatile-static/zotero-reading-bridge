@@ -524,15 +524,15 @@ describe("manifest transforms", () => {
     const source = JSON.stringify({
       name: "m",
       plugins: [
-        { name: "zotero-ai-bridge", source: "./", version: "0.0.1" },
+        { name: "zotero-reading-bridge", source: "./", version: "0.0.1" },
         { name: "other", version: "0.0.1" },
       ],
     });
-    const updated = JSON.parse(injectMarketplaceVersion(source, "zotero-ai-bridge", "2.0.0", "m.json"));
+    const updated = JSON.parse(injectMarketplaceVersion(source, "zotero-reading-bridge", "2.0.0", "m.json"));
     assert.equal(updated.plugins[0].version, "2.0.0");
     assert.equal(updated.plugins[1].version, "0.0.1");
-    const unpinned = JSON.stringify({ plugins: [{ name: "zotero-ai-bridge", source: "./" }] });
-    assert.equal(injectMarketplaceVersion(unpinned, "zotero-ai-bridge", "2.0.0", "m.json"), unpinned);
+    const unpinned = JSON.stringify({ plugins: [{ name: "zotero-reading-bridge", source: "./" }] });
+    assert.equal(injectMarketplaceVersion(unpinned, "zotero-reading-bridge", "2.0.0", "m.json"), unpinned);
   });
 
   it("parses SKILL.md front matter", () => {
@@ -566,7 +566,7 @@ const MCP_URL = "http://127.0.0.1:23119/bridge/mcp";
 function codexFiles(overrides: Record<string, string | object> = {}): FileMap {
   return fileMap({
     ".codex-plugin/plugin.json": {
-      name: "zotero-ai-bridge",
+      name: "zotero-reading-bridge",
       version: "1.0.0",
       skills: "./skills/",
       mcpServers: "./.mcp.json",
@@ -592,7 +592,7 @@ function codexFiles(overrides: Record<string, string | object> = {}): FileMap {
 
 function claudeFiles(overrides: Record<string, string | object> = {}): FileMap {
   return fileMap({
-    ".claude-plugin/plugin.json": { name: "zotero-ai-bridge", version: "1.0.0", description: "d" },
+    ".claude-plugin/plugin.json": { name: "zotero-reading-bridge", version: "1.0.0", description: "d" },
     ".mcp.json": { mcpServers: { zotero: { type: "http", url: MCP_URL } } },
     "hooks/hooks.json": {
       hooks: {
@@ -601,7 +601,7 @@ function claudeFiles(overrides: Record<string, string | object> = {}): FileMap {
             hooks: [
               {
                 ...HOOK_BASE,
-                server: "plugin:zotero-ai-bridge:zotero",
+                server: "plugin:zotero-reading-bridge:zotero",
                 input: { client: "claude-code", session_id: "${session_id}", prompt_id: "${prompt_id}" },
               },
             ],
@@ -622,7 +622,7 @@ describe("client plugin checks", () => {
     const source = codexFiles({
       "plugin.json": {
         $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-        name: "zotero-ai-bridge", version: "1.0.0", extensions: { "com.openai": {} },
+        name: "zotero-reading-bridge", version: "1.0.0", extensions: { "com.openai": {} },
       },
       ".agents/plugins/marketplace.json": {},
     });
@@ -650,10 +650,10 @@ describe("client plugin checks", () => {
       ".mcp.json": { mcpServers: { zotero_bridge: { type: "http", url: MCP_URL, default_tools_approval_mode: "approve" } } },
     });
     assert.match(failures(codexPackageChecks(relaxed, "1.0.0")).join("\n"), /default_tools_approval_mode must not be set/);
-    const withHooksKey = claudeFiles({ ".claude-plugin/plugin.json": { name: "zotero-ai-bridge", version: "1.0.0", hooks: "./hooks/hooks.json" } });
+    const withHooksKey = claudeFiles({ ".claude-plugin/plugin.json": { name: "zotero-reading-bridge", version: "1.0.0", hooks: "./hooks/hooks.json" } });
     assert.match(failures(claudeCodePackageChecks(withHooksKey, "1.0.0")).join("\n"), /must not declare "hooks"/);
     const badPath = codexFiles({
-      ".codex-plugin/plugin.json": { name: "zotero-ai-bridge", version: "1.0.0", hooks: "hooks/hooks.json", skills: "./missing/" },
+      ".codex-plugin/plugin.json": { name: "zotero-reading-bridge", version: "1.0.0", hooks: "hooks/hooks.json", skills: "./missing/" },
     });
     const detail = failures(codexPackageChecks(badPath, "1.0.0")).join("\n");
     assert.match(detail, /hooks must start with "\.\/"/);
@@ -706,7 +706,7 @@ const BOOTSTRAP_OK = [
 ].join("\n");
 const BRIDGE_OK = [
   "(() => {",
-  '  const l10n = new Localization(["zotero-ai-bridge.ftl"]);',
+  '  const l10n = new Localization(["zotero-reading-bridge.ftl"]);',
   "  const port = Zotero.Server.port;",
   "  const pane = (root) => ({ src: `${root}content/preferences.xhtml`, image: `${root}content/icons/icon.svg` });",
   "  function registerEndpoints() {",
@@ -727,13 +727,13 @@ function xpiFiles(overrides: Record<string, string | object> = {}): FileMap {
   return fileMap({
     "manifest.json": {
       manifest_version: 2,
-      name: "Zotero AI Bridge",
+      name: "Zotero Reading Bridge",
       version: "1.0.0",
       icons: { "48": "content/icons/icon.svg" },
       applications: {
         zotero: {
-          id: "zotero-ai-bridge@zotero-ai-bridge.local",
-          update_url: "https://zotero-ai-bridge.invalid/update.json",
+          id: "zotero-reading-bridge@zotero-reading-bridge.local",
+          update_url: "https://zotero-reading-bridge.invalid/update.json",
           strict_min_version: "10.999",
           strict_max_version: "11.*",
         },
@@ -743,10 +743,10 @@ function xpiFiles(overrides: Record<string, string | object> = {}): FileMap {
     "content/bridge.js": BRIDGE_OK,
     "content/preferences.js": "(() => { window.addEventListener('load', () => {}); })();\n",
     "content/preferences.xhtml":
-      '<vbox xmlns:html="http://www.w3.org/1999/xhtml"><linkset><html:link rel="localization" href="zotero-ai-bridge.ftl"/></linkset><html:img src="chrome://zotero/skin/x.svg"/></vbox>',
+      '<vbox xmlns:html="http://www.w3.org/1999/xhtml"><linkset><html:link rel="localization" href="zotero-reading-bridge.ftl"/></linkset><html:img src="chrome://zotero/skin/x.svg"/></vbox>',
     "content/icons/icon.svg": "<svg/>",
-    "locale/en-US/zotero-ai-bridge.ftl": "zotero-ai-bridge-title = Zotero AI Bridge\n    .label = x\n",
-    "locale/zh-CN/zotero-ai-bridge.ftl": "zotero-ai-bridge-title = Zotero AI 桥接\n",
+    "locale/en-US/zotero-reading-bridge.ftl": "zotero-reading-bridge-title = Zotero Reading Bridge\n    .label = x\n",
+    "locale/zh-CN/zotero-reading-bridge.ftl": "zotero-reading-bridge-title = Zotero AI 桥接\n",
     ...overrides,
   });
 }
@@ -765,10 +765,10 @@ describe("XPI checks", () => {
     assert.match(failures(xpiPackageChecks(brokenRef, "1.0.0")).join("\n"), /content\/preferences\.js -> content\/missing\.css \(missing\)/);
     const relative = xpiFiles({ "content/preferences.xhtml": '<html:img src="icons/icon.svg"/>' });
     assert.match(failures(xpiPackageChecks(relative, "1.0.0")).join("\n"), /resolves outside the plugin/);
-    const unprefixed = xpiFiles({ "locale/zh-CN/zotero-ai-bridge.ftl": "title = x\n" });
+    const unprefixed = xpiFiles({ "locale/zh-CN/zotero-reading-bridge.ftl": "title = x\n" });
     const ftl = failures(xpiPackageChecks(unprefixed, "1.0.0")).join("\n");
-    assert.match(ftl, /lacks the zotero-ai-bridge- prefix/);
-    assert.match(ftl, /"zotero-ai-bridge-title" is in en-US but not in zh-CN/);
+    assert.match(ftl, /lacks the zotero-reading-bridge- prefix/);
+    assert.match(ftl, /"zotero-reading-bridge-title" is in en-US but not in zh-CN/);
     const ts = xpiFiles({ "content/preferences.ts": "x", "content/tsconfig.json": "{}" });
     assert.match(failures(xpiPackageChecks(ts, "1.0.0")).join("\n"), /unexpected content\/preferences\.ts/);
     const noIcon = new Map(xpiFiles());
@@ -779,11 +779,11 @@ describe("XPI checks", () => {
   it("pin the bootstrap/bridge global contract of the shared sandbox", () => {
     const api = "{ startup() {}, shutdown() {} }";
     const cases: [string, RegExp][] = [
-      // A top-level var survives bootstrap's `delete globalThis.ZoteroAIBridgeMain`.
+      // A top-level var survives bootstrap's `delete globalThis.ZoteroReadingBridgeMain`.
       [`var ${MAIN_GLOBAL_NAME} = ${api};`, /cannot be deleted by bootstrap\.js shutdown/],
-      [`globalThis.${MAIN_GLOBAL_NAME} = ${api}; globalThis.helper = 1;`, /must add exactly the global ZoteroAIBridgeMain \(added: \[ZoteroAIBridgeMain, helper\]\)/],
+      [`globalThis.${MAIN_GLOBAL_NAME} = ${api}; globalThis.helper = 1;`, /must add exactly the global ZoteroReadingBridgeMain \(added: \[ZoteroReadingBridgeMain, helper\]\)/],
       [`globalThis.${MAIN_GLOBAL_NAME} = ${api}; globalThis.startup = () => {};`, /replaced the bootstrap hook startup/],
-      [`globalThis.${MAIN_GLOBAL_NAME} = { startup() {} };`, /ZoteroAIBridgeMain\.shutdown is not a function/],
+      [`globalThis.${MAIN_GLOBAL_NAME} = { startup() {} };`, /ZoteroReadingBridgeMain\.shutdown is not a function/],
       // A vm-realm Error is not `instanceof Error` here, so the message keeps its "Error: " prefix.
       ["throw new Error('boom');", /content\/bridge\.js threw while loading: Error: boom/],
     ];
@@ -826,7 +826,7 @@ describe("XPI checks", () => {
   });
 
   it("extract resource references from scripts, markup and Fluent", () => {
-    const code = 'a(rootURI + "content/x.js"); b(`${this.rootURI}locale/y.ftl?q`); c("content/icons/i.png"); d("content/"); e("zotero-ai-bridge.ftl")';
+    const code = 'a(rootURI + "content/x.js"); b(`${this.rootURI}locale/y.ftl?q`); c("content/icons/i.png"); d("content/"); e("zotero-reading-bridge.ftl")';
     assert.deepEqual(scriptResourceRefs(code), ["content/icons/i.png", "content/x.js", "locale/y.ftl"]);
     assert.deepEqual(markupResourceRefs('<a href="#x"/><img src="content/a.svg"/><link href="b.ftl"/><img src="rel.png"/><img src="data:x"/>'), {
       files: ["content/a.svg"],
@@ -873,8 +873,8 @@ describe("esbuild bundling", () => {
     writeTree(root, {
       "src/main.ts": [
         'import text from "./policy.md";',
-        "declare global { var ZoteroAIBridgeMain: { startup(): string; shutdown(): void } | undefined; }",
-        "globalThis.ZoteroAIBridgeMain = { startup: () => text, shutdown() {} };",
+        "declare global { var ZoteroReadingBridgeMain: { startup(): string; shutdown(): void } | undefined; }",
+        "globalThis.ZoteroReadingBridgeMain = { startup: () => text, shutdown() {} };",
       ].join("\n"),
       "src/policy.md": "# 规则\nUse Zotero.\n",
       "src/md.d.ts": 'declare module "*.md" { const text: string; export default text; }\n',
@@ -904,7 +904,7 @@ describe("esbuild bundling", () => {
     const root = tmpDir("bundle-endpoint");
     const endpointModule = (initParams: string, methods: string): string =>
       [
-        'const PATHS = ["/bridge/mcp", "/codex/mcp"];',
+        'const PATHS = ["/bridge/mcp"];',
         "export function registerEndpoints(options: { port: number }) {",
         "  class Endpoint {",
         `    supportedMethods = ${methods};`,
@@ -922,6 +922,7 @@ describe("esbuild bundling", () => {
       "good.ts": endpointModule("request: unknown", allMethods),
       "two-args.ts": endpointModule("data: unknown, send: unknown", '["POST"]'),
       "default.ts": endpointModule("request: unknown = {}", allMethods),
+      "alias.ts": endpointModule("request: unknown", allMethods).replace('["/bridge/mcp"]', '["/bridge/mcp", "/codex/mcp"]'),
     });
     const check = async (entry: string): Promise<string> =>
       endpointRegistrationProblems(await bundleForInspection(root, entry, "__inspect"), "__inspect").join("\n");
@@ -930,6 +931,7 @@ describe("esbuild bundling", () => {
     assert.match(twoArgs, /init\.length is 2/);
     assert.match(twoArgs, /supportedMethods lacks GET, PUT, PATCH, DELETE/);
     assert.match(await check("default.ts"), /init\.length is 0/);
+    assert.match(await check("alias.ts"), /unexpected endpoint registered: \/codex\/mcp/);
   });
 });
 
@@ -937,8 +939,8 @@ describe("Claude Desktop extension", () => {
   const RELAY_OK = 'const http = require("node:http");\nhttp.request({ host: "127.0.0.1", port: 23119 });\nconst v = "0.1.0";\n';
   const manifest = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
     manifest_version: "0.2",
-    name: "zotero-ai-bridge",
-    display_name: "Zotero AI Bridge",
+    name: "zotero-reading-bridge",
+    display_name: "Zotero Reading Bridge",
     version: "0.1.0",
     description: "Read-only Zotero.",
     author: { name: "Contributors" },
@@ -951,7 +953,7 @@ describe("Claude Desktop extension", () => {
     ...overrides,
   });
   const desktopFiles = (overrides: Record<string, string | object> = {}): FileMap =>
-    fileMap({ "manifest.json": manifest(), "server/zotero-relay.js": RELAY_OK, "README.md": "# 说明\n", ...overrides });
+    fileMap({ "manifest.json": manifest(), "server/zotero-relay.js": RELAY_OK, "README.md": "# 说明\n", "LICENSE": "GPL-3.0-or-later", ...overrides });
 
   it("accepts a well-formed package", () => {
     assert.deepEqual(failures(claudeDesktopPackageChecks(desktopFiles(), "0.1.0")), []);

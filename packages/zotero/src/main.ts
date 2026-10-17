@@ -4,8 +4,8 @@
  * Bundle contract: esbuild builds this file as a strict IIFE with no ESM exports (the build rejects exports);
  * bootstrap.js evaluates it with `loadSubScriptWithOptions(url, { target: globalThis, ignoreCache: true,
  * allowUnsafeURL: true })`, and the last statement below adds the only global, a plain (deletable) property
- * `globalThis.ZoteroAIBridgeMain = { startup(data), shutdown(reason) }`. While running, the runtime also
- * publishes `Zotero.ZoteroAIBridge` (BridgePaneApi) for the preferences pane and removes it on shutdown.
+ * `globalThis.ZoteroReadingBridgeMain = { startup(data), shutdown(reason) }`. While running, the runtime also
+ * publishes `Zotero.ZoteroReadingBridge` (BridgePaneApi) for the preferences pane and removes it on shutdown.
  */
 import toolContract from "../../../shared/contracts/tools.json";
 import contextPolicy from "../../../shared/instructions/context-policy.md";
@@ -39,7 +39,7 @@ import type { ToolHandler, ToolRegistry } from "./tools/types.js";
 import { ensureItemsLoaded, listNonFeedLibraries } from "./zotero/library.js";
 import { startResultCaching } from "./zotero/result-caches.js";
 
-const LOG_PREFIX = "[Zotero AI Bridge]";
+const LOG_PREFIX = "[Zotero Reading Bridge]";
 /** Let Zotero finish opening its window before warming item caches, then load libraries one at a time. */
 const PREWARM_START_DELAY_MS = 3000;
 const PREWARM_GAP_MS = 500;
@@ -62,7 +62,7 @@ class BridgeRuntime {
   private readonly sleeps = new Map<ReturnType<typeof setTimeout>, () => void>();
   private readonly api: BridgePaneApi = { getState: () => this.getState() };
 
-  constructor(private readonly data: ZoteroAIBridgeStartupData) {}
+  constructor(private readonly data: ZoteroReadingBridgeStartupData) {}
 
   async start(): Promise<void> {
     if (this.stopped) return;
@@ -82,7 +82,7 @@ class BridgeRuntime {
         new Error(`${LOG_PREFIX} could not verify that Zotero's HTTP server binds 127.0.0.1 only; endpoints stay off`),
       );
     }
-    Zotero.ZoteroAIBridge = this.api;
+    Zotero.ZoteroReadingBridge = this.api;
     // Result caches are enabled only together with the change observer that clears them.
     this.stopResultCaching = startResultCaching();
     this.serve();
@@ -114,7 +114,7 @@ class BridgeRuntime {
       if (paneID !== null) Zotero.PreferencePanes.unregister(paneID);
     });
     this.cleanup(() => {
-      if (Zotero.ZoteroAIBridge === this.api) delete Zotero.ZoteroAIBridge;
+      if (Zotero.ZoteroReadingBridge === this.api) delete Zotero.ZoteroReadingBridge;
     });
     this.cleanup(() => {
       const restoreResponseCodes = this.restoreResponseCodes;
@@ -255,12 +255,12 @@ function errorName(e: unknown): string {
 
 /**
  * One runtime per evaluation of this bundle. bootstrap.js re-evaluates the bundle on every startup (a fresh
- * closure), so an earlier runtime is out of reach here: bootstrap.js shuts the previous ZoteroAIBridgeMain down
+ * closure), so an earlier runtime is out of reach here: bootstrap.js shuts the previous ZoteroReadingBridgeMain down
  * before loading the bundle again.
  */
 let runtime: BridgeRuntime | null = null;
 
-async function startup(data: ZoteroAIBridgeStartupData): Promise<void> {
+async function startup(data: ZoteroReadingBridgeStartupData): Promise<void> {
   // Assigned before awaiting so a shutdown that arrives meanwhile stops this instance.
   const current = new BridgeRuntime(data);
   runtime = current;
@@ -274,4 +274,4 @@ function shutdown(reason: number): void {
   runtime = null;
 }
 
-globalThis.ZoteroAIBridgeMain = { startup, shutdown };
+globalThis.ZoteroReadingBridgeMain = { startup, shutdown };

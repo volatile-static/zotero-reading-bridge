@@ -151,7 +151,7 @@ for (const spec of CLIENTS) {
     it("manifest names the plugin and matches the package version", () => {
       assert.equal(manifest.name, PLUGIN_NAME);
       assert.equal(manifest.version, PACKAGE_VERSION);
-      assert.equal(manifest.license, "MIT");
+      assert.equal(manifest.license, "GPL-3.0-or-later");
       assert.ok(typeof manifest.description === "string" && manifest.description.length > 0);
     });
 
@@ -222,7 +222,7 @@ describe("Codex specifics", () => {
 
   it("bundled marketplace points at the plugin root itself", () => {
     const market = readJson(`${root}.agents/plugins/marketplace.json`);
-    assert.equal(market.name, "zotero-ai-bridge-local");
+    assert.equal(market.name, "zotero-reading-bridge-local");
     assert.equal(market.plugins.length, 1);
     const entry = market.plugins[0];
     assert.equal(entry.name, PLUGIN_NAME);
@@ -246,7 +246,7 @@ describe("Claude Code specifics", () => {
 
   it("bundled marketplace points at the plugin root itself", () => {
     const market = readJson(`${root}.claude-plugin/marketplace.json`);
-    assert.equal(market.name, "zotero-ai-bridge-local");
+    assert.equal(market.name, "zotero-reading-bridge-local");
     assert.ok(isObject(market.owner) && typeof market.owner.name === "string");
     assert.equal(market.plugins.length, 1);
     const entry = market.plugins[0];

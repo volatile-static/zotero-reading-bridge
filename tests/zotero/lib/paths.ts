@@ -12,7 +12,7 @@ export const WORK_ROOT = path.join(REPO_ROOT, "work");
 export const TEST_ROOT = path.join(WORK_ROOT, "zotero-test");
 export const REPORT_PATH = path.join(TEST_ROOT, "report.json");
 /** The release XPI from `npm run build`; ZAB_BRIDGE_XPI points the harness at another candidate build. */
-export const BRIDGE_XPI = path.resolve(process.env.ZAB_BRIDGE_XPI ?? path.join(REPO_ROOT, "outputs", "zotero-ai-bridge.xpi"));
+export const BRIDGE_XPI = path.resolve(process.env.ZAB_BRIDGE_XPI ?? path.join(REPO_ROOT, "outputs", "zotero-reading-bridge.xpi"));
 export const SEED_PLUGIN_DIR = path.join(REPO_ROOT, "tests", "zotero", "seed-plugin");
 
 export const ZOTERO_EXE = process.env.ZAB_ZOTERO_EXE ?? "C:/Program Files/Zotero/zotero.exe";

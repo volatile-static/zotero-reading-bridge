@@ -1,11 +1,11 @@
 {
-  "name": "zotero-ai-bridge",
+  "name": "zotero-reading-bridge",
   "version": "0.2.0",
   "description": "Read-only access to your local Zotero library and the current Zotero selection, attached to every prompt.",
   "author": {
-    "name": "Zotero AI Bridge contributors"
+    "name": "volatile-static"
   },
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "keywords": [
     "zotero",
     "research",
@@ -17,10 +17,10 @@
   "mcpServers": "./.mcp.json",
   "hooks": "./hooks/hooks.json",
   "interface": {
-    "displayName": "Zotero AI Bridge",
+    "displayName": "Zotero Reading Bridge",
     "shortDescription": "Read your local Zotero library",
     "longDescription": "Search items, collections, notes, annotations and attachment paths in the running Zotero desktop app (read-only, local only), and attach the current Zotero selection or open PDF to each prompt.",
-    "developerName": "Zotero AI Bridge contributors",
+    "developerName": "volatile-static",
     "category": "Productivity",
     "capabilities": [
       "Read"

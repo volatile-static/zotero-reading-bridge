@@ -17,7 +17,7 @@ import {
 import { loopbackSourcesVerified } from "./loopback.js";
 import { jsonResponse } from "./response.js";
 
-const LOG_PREFIX = "[Zotero AI Bridge]";
+const LOG_PREFIX = "[Zotero Reading Bridge]";
 
 /** The single argument Zotero passes to a one-parameter endpoint init() (server.js `_processEndpoint`). */
 interface ZoteroEndpointRequest {
@@ -57,7 +57,7 @@ export function registerEndpoints(options: EndpointOptions): EndpointRegistratio
   // declare exactly one parameter (no default or rest). GET/PUT/PATCH/DELETE are listed so our handler answers
   // 405 itself instead of Zotero's 400; "*" lets it answer 415 for non-JSON bodies. No CORS opt-in: Zotero keeps
   // dropping requests that carry Origin or a Mozilla/ User-Agent.
-  class ZoteroAIBridgeEndpoint {
+  class ZoteroReadingBridgeEndpoint {
     supportedMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
     supportedDataTypes = "*";
 
@@ -71,13 +71,13 @@ export function registerEndpoints(options: EndpointOptions): EndpointRegistratio
     if (endpoints[path] !== undefined) {
       Zotero.warn(new Error(`${LOG_PREFIX} replacing an existing endpoint at ${path}`));
     }
-    endpoints[path] = ZoteroAIBridgeEndpoint;
+    endpoints[path] = ZoteroReadingBridgeEndpoint;
   }
   return {
     paths: ENDPOINT_PATHS,
     unregister() {
       for (const path of ENDPOINT_PATHS) {
-        if (endpoints[path] === ZoteroAIBridgeEndpoint) delete endpoints[path];
+        if (endpoints[path] === ZoteroReadingBridgeEndpoint) delete endpoints[path];
       }
     },
   };

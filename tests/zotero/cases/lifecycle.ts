@@ -9,7 +9,6 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   BRIDGE_TITLE,
-  ENDPOINT_ALIAS_PATH,
   ENDPOINT_PATH,
   ENDPOINT_PATHS,
   ZOTERO_ADDON_ID,
@@ -98,9 +97,9 @@ async function assertBridgeOff(ctx: HarnessContext): Promise<Record<string, numb
 async function assertBridgeOn(ctx: HarnessContext): Promise<void> {
   for (const path of ENDPOINT_PATHS) {
     const init = await ctx.mcp(path).initialize("zab-lifecycle");
-    assert.equal(init.message.result.serverInfo.name, "zotero-ai-bridge");
+    assert.equal(init.message.result.serverInfo.name, "zotero-reading-bridge");
   }
-  const status = await ctx.mcp(ENDPOINT_ALIAS_PATH).tool("get_status");
+  const status = await ctx.mcp(ENDPOINT_PATH).tool("get_status");
   assert.equal(status.bridge.status, "running");
   const found = await ctx.mcp().tool("search_items", { query: "深度学习" });
   assert.ok(found.items.some((i: any) => i.key === fixtureKey(ctx, "item-zh-article")), "search after re-enable");
@@ -112,7 +111,7 @@ async function assertBridgeOn(ctx: HarnessContext): Promise<void> {
   assert.equal(ping.response?.status, 200, "connector ping with the bridge on");
 }
 
-const STATUS_RUNNING = "zotero-ai-bridge-pref-status-running";
+const STATUS_RUNNING = "zotero-reading-bridge-pref-status-running";
 
 /** Fluent ids written statically in the shipped pane markup (the status id is set by the pane script). */
 function staticPaneL10nIds(): string[] {
@@ -122,7 +121,7 @@ function staticPaneL10nIds(): string[] {
 
 function ftlMessage(ftl: Map<string, FtlMessage>, id: string, locale: string): FtlMessage {
   const message = ftl.get(id);
-  if (!message) throw new Error(`${id} is missing from locale/${locale}/zotero-ai-bridge.ftl`);
+  if (!message) throw new Error(`${id} is missing from locale/${locale}/zotero-reading-bridge.ftl`);
   return message;
 }
 
@@ -164,7 +163,7 @@ export const lifecycleCases: TestCase[] = [
       const files = Object.values(ctx.observed?.attachments ?? {}).flatMap((att) => (att.path ? [att.path] : []));
       const before = await stableFingerprint(ctx.seed, files);
       const client = ctx.mcp();
-      const count = (await toolBattery(ctx, client)) + (await toolBattery(ctx, ctx.mcp(ENDPOINT_ALIAS_PATH, "2025-06-18")));
+      const count = (await toolBattery(ctx, client)) + (await toolBattery(ctx, ctx.mcp(ENDPOINT_PATH, "2025-06-18")));
       await captureHook(client, { client: "codex", session_id: "ro", turn_id: "ro-final" });
       // Give any deferred write (debounced saves, notifier-triggered work) time to land before comparing.
       await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -235,7 +234,6 @@ export const lifecycleCases: TestCase[] = [
         assert.equal(pane.status?.l10nId, STATUS_RUNNING, "status message");
         assert.equal(stripIsolationMarks(pane.status.text), expectedStatus(en, STATUS_RUNNING, ctx.port), "status text");
         assert.equal(pane.address, endpointUrl(ctx.port, ENDPOINT_PATH));
-        assert.equal(pane.alias, endpointUrl(ctx.port, ENDPOINT_ALIAS_PATH));
         assert.deepEqual(Object.entries(pane.buttonsDisabled).filter(([, disabled]) => disabled), [], "copy buttons enabled");
 
         const closed = await ctx.seed.prefsPane({ action: "close", pluginID: ZOTERO_ADDON_ID });

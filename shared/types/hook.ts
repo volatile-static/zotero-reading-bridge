@@ -33,7 +33,7 @@ export const CLIENT_SERVER_NAMES = {
   /** Claude Code: key inside the plugin's .mcp.json ... */
   claudeCode: "zotero",
   /** ... which hooks must reference as plugin:<plugin-name>:<server-key>. */
-  claudeCodeHookServer: "plugin:zotero-ai-bridge:zotero",
+  claudeCodeHookServer: "plugin:zotero-reading-bridge:zotero",
   /**
    * Claude Code manual registration (`claude mcp add`) and its settings.json hook. Same distinctive name as Codex:
    * a bare "zotero" is often taken by another Zotero MCP server, and a same-name server at a higher-precedence
@@ -44,4 +44,4 @@ export const CLIENT_SERVER_NAMES = {
   claudeDesktopManual: "zotero_bridge",
 } as const;
 
-export const PLUGIN_NAME = "zotero-ai-bridge";
+export const PLUGIN_NAME = "zotero-reading-bridge";

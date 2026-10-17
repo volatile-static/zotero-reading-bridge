@@ -3,7 +3,7 @@
  * 5-12), observed with a raw socket client so status lines, headers and dropped connections are visible.
  */
 import assert from "node:assert/strict";
-import { ENDPOINT_ALIAS_PATH, ENDPOINT_PATH, LOOPBACK_HOST } from "../../../shared/types/bridge.js";
+import { ENDPOINT_PATH, ENDPOINT_PATHS, LOOPBACK_HOST } from "../../../shared/types/bridge.js";
 import { JSONRPC_INVALID_PARAMS, JSONRPC_INVALID_REQUEST, JSONRPC_METHOD_NOT_FOUND, SUPPORTED_PROTOCOL_VERSIONS } from "../../../shared/types/mcp.js";
 import { TOOL_NAMES } from "../../../shared/types/tool-names.js";
 import { rawRequest, type RawResponse, type RawResult } from "../lib/http.js";
@@ -60,7 +60,7 @@ function initializeCase(version: string): TestCase {
       assertJsonResponse(init.http, "initialize");
       const result = init.message.result;
       assert.equal(result.protocolVersion, version);
-      assert.equal(result.serverInfo?.name, "zotero-ai-bridge");
+      assert.equal(result.serverInfo?.name, "zotero-reading-bridge");
       assert.deepEqual(result.capabilities?.tools, { listChanged: false });
       assert.equal(typeof result.instructions, "string");
       assert.ok(result.instructions.length > 0 && result.instructions.length <= 4000, `instructions length ${result.instructions.length}`);
@@ -96,7 +96,7 @@ export const protocolCases: TestCase[] = [
     title: "server/discover probe (2026-07-28 header) gets HTTP 400 with -32601 echoing the id",
     requires: ["bridge"],
     async run(ctx) {
-      for (const path of [ENDPOINT_PATH, ENDPOINT_ALIAS_PATH]) {
+      for (const path of ENDPOINT_PATHS) {
         const result = await ctx.mcp(path).post({ jsonrpc: "2.0", id: "probe-1", method: "server/discover", params: {} }, { versionHeader: "2026-07-28" });
         assertRpcRejection(result, 400, JSONRPC_METHOD_NOT_FOUND, "probe-1", `probe on ${path}`);
       }
@@ -156,12 +156,12 @@ export const protocolCases: TestCase[] = [
   },
   {
     id: "protocol.browser-requests-refused",
-    title: "Requests with an Origin header or a Mozilla/ User-Agent never get a usable response (both paths)",
+    title: "Requests with an Origin header or a Mozilla/ User-Agent never get a usable response",
     requires: ["bridge"],
     async run(ctx) {
       const outcomes: Record<string, string> = {};
       const ping = { jsonrpc: "2.0", id: 1, method: "ping" };
-      for (const path of [ENDPOINT_PATH, ENDPOINT_ALIAS_PATH]) {
+      for (const path of ENDPOINT_PATHS) {
         for (const [what, options] of [
           ["origin", { extraHeaders: [["Origin", "http://evil.example"]] as Array<[string, string]> }],
           ["null origin", { extraHeaders: [["Origin", "null"]] as Array<[string, string]> }],
@@ -181,7 +181,7 @@ export const protocolCases: TestCase[] = [
   },
   {
     id: "protocol.bookmarklet-origin",
-    title: "Origin requests Zotero does not drop (connector headers, zotero.org CORS) reach the bridge and get 403 on both paths",
+    title: "Origin requests Zotero does not drop (connector headers, zotero.org CORS) reach the bridge and get 403",
     requires: ["bridge"],
     async run(ctx) {
       // A real tool call: if the Origin rule were missing, these would return library data.
@@ -196,7 +196,7 @@ export const protocolCases: TestCase[] = [
           { "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
         ],
       ];
-      for (const path of [ENDPOINT_PATH, ENDPOINT_ALIAS_PATH]) {
+      for (const path of ENDPOINT_PATHS) {
         for (const [what, extraHeaders, override] of cases) {
           const http = response(await ctx.mcp(path).post(call, { extraHeaders, override }), `${path} ${what}`);
           assert.equal(http.status, 403, `${path} ${what}: HTTP ${http.status} ${http.body.slice(0, 200)}`);
@@ -231,12 +231,12 @@ export const protocolCases: TestCase[] = [
   },
   {
     id: "protocol.host-check",
-    title: "Foreign Host and wrong-port Host are rejected on both paths (httpd / Zotero 400; the bridge's own check 403)",
+    title: "Foreign Host and wrong-port Host are rejected (httpd / Zotero 400; the bridge's own check 403)",
     requires: ["bridge"],
     async run(ctx) {
       const ping = { jsonrpc: "2.0", id: 1, method: "ping" };
       const outcomes: Record<string, unknown> = {};
-      for (const path of [ENDPOINT_PATH, ENDPOINT_ALIAS_PATH]) {
+      for (const path of ENDPOINT_PATHS) {
         const client = ctx.mcp(path);
         // HTTP/1.1: Gecko's httpd rejects a Host that is not one of the server identities before Zotero runs,
         // with its generic "Bad Request" (not Zotero's "Invalid Host header").
@@ -293,21 +293,6 @@ export const protocolCases: TestCase[] = [
         assert.equal(tool.outputSchema, undefined, `${tool.name} must not declare outputSchema`);
       }
       return { count: tools.length };
-    },
-  },
-  {
-    id: "protocol.alias-equality",
-    title: "/codex/mcp is an exact alias of /bridge/mcp",
-    requires: ["bridge"],
-    async run(ctx) {
-      assert.deepEqual(await toolsList(ctx, ENDPOINT_ALIAS_PATH), await toolsList(ctx, ENDPOINT_PATH));
-      const viaAlias = await ctx.mcp(ENDPOINT_ALIAS_PATH, "2025-06-18").tool("get_status");
-      const viaPrimary = await ctx.mcp(ENDPOINT_PATH).tool("get_status");
-      assert.equal(viaAlias.bridge?.requestPath, ENDPOINT_ALIAS_PATH);
-      assert.equal(viaPrimary.bridge?.requestPath, ENDPOINT_PATH);
-      assert.equal(viaAlias.bridge?.protocolVersion, "2025-06-18");
-      const init = await ctx.mcp(ENDPOINT_ALIAS_PATH, "2025-06-18").initialize("codex-like");
-      assert.equal(init.message.result.protocolVersion, "2025-06-18");
     },
   },
   {

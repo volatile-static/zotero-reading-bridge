@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://zotero-ai-bridge.invalid/contracts/context-snapshot.schema.json",
-  "title": "Zotero AI Bridge context snapshot",
+  "$id": "https://zotero-reading-bridge.invalid/contracts/context-snapshot.schema.json",
+  "title": "Zotero Reading Bridge context snapshot",
   "description": "Live Zotero UI state captured at one instant (get_current_context result; JSON inside <zotero_snapshot> of the capture_prompt_context hook output). Twin of shared/types/snapshot.ts ContextSnapshot; tests/unit/snapshot-schema.test.ts keeps them in sync.",
   "type": "object",
   "properties": {

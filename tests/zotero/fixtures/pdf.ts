@@ -36,7 +36,7 @@ export function buildFixturePdf(pages: readonly (readonly string[])[] = PDF_PAGE
     `<< /Type /Catalog /Pages 2 0 R /PageLabels << /Nums [0 << /S /D /St ${PDF_FIRST_PAGE_LABEL} >>] >> >>`;
   objects[2] = `<< /Type /Pages /Kids [${pageObjectNumbers.map((n) => `${n} 0 R`).join(" ")}] /Count ${pages.length} >>`;
   objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
-  objects[4] = "<< /Title (Zotero AI Bridge fixture) /Producer (zab-harness) >>";
+  objects[4] = "<< /Title (Zotero Reading Bridge fixture) /Producer (zab-harness) >>";
   pages.forEach((lines, index) => {
     const pageNumber = 5 + index * 2;
     const stream = contentStream(lines);

@@ -16,10 +16,10 @@ Zotero snapshot rules:
 - If status is "empty" or "unavailable", or a message has no snapshot of its own, never present an older snapshot as current: say the current state is unknown, or call get_current_context if the user means the current selection.
 <!-- END:hook-rules -->
 
-## About the Zotero AI Bridge server
+## About the Zotero Reading Bridge server
 
 <!-- BEGIN:server-instructions -->
-Zotero AI Bridge gives read-only access to the user's local Zotero library through the running Zotero desktop app: search, item metadata, collections, saved searches, tags, notes, annotations (with images), the full text Zotero extracted from attachments, attachment file paths and the live Zotero selection. It cannot create, change or delete anything and never downloads files. If tools fail, call get_status; Zotero must be running.
+Zotero Reading Bridge gives read-only access to the user's local Zotero library through the running Zotero desktop app: search, item metadata, collections, saved searches, tags, notes, annotations (with images), the full text Zotero extracted from attachments, attachment file paths and the live Zotero selection. It cannot create, change or delete anything and never downloads files. If tools fail, call get_status; Zotero must be running.
 
 Addressing: every item, collection, saved search, note and annotation is identified by libraryID + key (8 characters, e.g. "ABCD2345"). libraryID defaults to the personal library; group libraries have their own libraryID (list_libraries). Copy libraryID and key exactly from tool results or the context snapshot and always pass both together; never guess keys from titles.
 

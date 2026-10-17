@@ -2,16 +2,17 @@
  * Bridge-wide constants shared by the Zotero plugin, client config generation, build scripts and tests.
  */
 
-export const BRIDGE_NAME = "zotero-ai-bridge";
-export const BRIDGE_TITLE = "Zotero AI Bridge";
+export const BRIDGE_NAME = "zotero-reading-bridge";
+export const BRIDGE_TITLE = "Zotero Reading Bridge";
 
-/** Zotero add-on id (manifest applications.zotero.id). */
-export const ZOTERO_ADDON_ID = "zotero-ai-bridge@zotero-ai-bridge.local";
+/** Zotero add-on identity for Zotero Reading Bridge. */
+export const ZOTERO_ADDON_ID = "zotero-reading-bridge@zotero-reading-bridge.local";
+/** Fluent ids share Zotero's localization namespace and use the project prefix. */
+export const LOCALIZATION_PREFIX = `${BRIDGE_NAME}-`;
 
-/** Primary endpoint path and its alias; both share one handler and one access policy. */
+/** The MCP endpoint exposed by the bridge. */
 export const ENDPOINT_PATH = "/bridge/mcp";
-export const ENDPOINT_ALIAS_PATH = "/codex/mcp";
-export const ENDPOINT_PATHS = [ENDPOINT_PATH, ENDPOINT_ALIAS_PATH] as const;
+export const ENDPOINT_PATHS = [ENDPOINT_PATH] as const;
 
 /** Zotero's default built-in HTTP server port (extensions.zotero.httpServer.port). */
 export const DEFAULT_ZOTERO_PORT = 23119;

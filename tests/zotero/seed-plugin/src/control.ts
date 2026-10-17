@@ -40,7 +40,7 @@ function pluginState(addon: any): PluginState {
 /** Bridge and seed paths currently registered on Zotero's HTTP server. */
 export function registeredEndpoints(): string[] {
   return Object.keys(Zotero.Server.Endpoints)
-    .filter((path) => /^\/(bridge|codex|zab-test)\//.test(path))
+    .filter((path) => /^\/(bridge|zab-test)\//.test(path))
     .sort();
 }
 

@@ -1,13 +1,13 @@
 ---
 name: zotero
-description: "Use when the user asks about papers, references, citations, notes, annotations, PDFs, collections or tags in their Zotero library, or refers to the paper open or selected in Zotero. Works through the read-only Zotero AI Bridge MCP tools of the running Zotero desktop app."
+description: "Use when the user asks about papers, references, citations, notes, annotations, PDFs, collections or tags in their Zotero library, or refers to the paper open or selected in Zotero. Works through the read-only Zotero Reading Bridge MCP tools of the running Zotero desktop app."
 ---
 
 # Zotero (Claude Code)
 
-This plugin connects Claude Code to the Zotero AI Bridge running inside the user's Zotero desktop app on this
-computer. Its MCP server is `plugin:zotero-ai-bridge:zotero`, so the tools appear as
-`mcp__plugin_zotero-ai-bridge_zotero__<tool>` (for example `mcp__plugin_zotero-ai-bridge_zotero__search_items`).
+This plugin connects Claude Code to the Zotero Reading Bridge running inside the user's Zotero desktop app on this
+computer. Its MCP server is `plugin:zotero-reading-bridge:zotero`, so the tools appear as
+`mcp__plugin_zotero-reading-bridge_zotero__<tool>` (for example `mcp__plugin_zotero-reading-bridge_zotero__search_items`).
 Everything is read-only.
 
 Before each message, a `UserPromptSubmit` hook calls `capture_prompt_context` and attaches the current Zotero state

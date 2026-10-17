@@ -7,7 +7,7 @@
  */
 import type { SeedManifest } from "./fixtures/data.js";
 
-export const SEED_ADDON_ID = "zab-test-seed@zotero-ai-bridge.local";
+export const SEED_ADDON_ID = "zab-test-seed@zotero-reading-bridge.local";
 /** Prefs written to the test profile's user.js; the seed plugin refuses to register endpoints without them. */
 export const SEED_PREF_TOKEN = "extensions.zab-test.token";
 export const SEED_PREF_DATA_DIR = "extensions.zab-test.dataDir";
@@ -266,7 +266,6 @@ export interface PaneState {
   elements: PaneElementState[];
   status: { l10nId: string | null; text: string } | null;
   address: string | null;
-  alias: string | null;
   /** Button id -> disabled attribute present. */
   buttonsDisabled: Record<string, boolean>;
 }

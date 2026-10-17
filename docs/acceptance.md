@@ -1,5 +1,7 @@
 # 验收记录
 
+历史记录中的 Zotero AI Bridge、旧安装包名和 `/codex/mcp` 对应当时测试的版本。当前项目已更名为 Zotero Reading Bridge，使用新的插件 ID，且只提供 `/bridge/mcp`；以下历史实测结果不代表新版已完成桌面实装验收。
+
 本页逐项列出原计划的全部验收项，并记录每一项的执行结果。手动步骤见：
 
 - Codex：[tests/clients/codex/README.md](../tests/clients/codex/README.md)

@@ -1,11 +1,11 @@
 ---
 name: zotero
-description: "Use when the user asks about papers, references, citations, notes, annotations, PDFs, collections or tags in their Zotero library, or refers to the paper open or selected in Zotero. Works through the read-only Zotero AI Bridge MCP tools; no Zotero state is attached to messages automatically."
+description: "Use when the user asks about papers, references, citations, notes, annotations, PDFs, collections or tags in their Zotero library, or refers to the paper open or selected in Zotero. Works through the read-only Zotero Reading Bridge MCP tools; no Zotero state is attached to messages automatically."
 ---
 
 # Zotero (no prompt hook)
 
-This skill is for MCP clients that reach the Zotero AI Bridge without a per-message prompt hook (for example Claude
+This skill is for MCP clients that reach the Zotero Reading Bridge without a per-message prompt hook (for example Claude
 Science or another generic MCP client). Nothing about the user's current Zotero selection is attached to messages
 automatically, so the current state must be fetched explicitly and is valid only at the moment it was captured.
 

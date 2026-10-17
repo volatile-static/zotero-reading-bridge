@@ -1,52 +1,47 @@
 <!--
-	Zotero AI Bridge preferences pane. Zotero parses this as a fragment (XUL default namespace, HTML under html:)
+	Zotero Reading Bridge preferences pane. Zotero parses this as a fragment (XUL default namespace, HTML under html:)
 	and runs content/preferences.js first; that script attaches every listener (no inline handlers).
-	IDs use the zab- prefix and Fluent IDs the zotero-ai-bridge- prefix because the preferences window is shared.
+	IDs use the zab- prefix and Fluent IDs the zotero-reading-bridge- prefix because the preferences window is shared.
 -->
 <linkset>
-	<html:link rel="localization" href="zotero-ai-bridge.ftl"/>
+	<html:link rel="localization" href="zotero-reading-bridge.ftl"/>
 </linkset>
 
 <vbox id="zab-pane">
 	<vbox class="main-section">
 		<groupbox aria-labelledby="zab-endpoint-heading">
-			<label><html:h2 id="zab-endpoint-heading" data-l10n-id="zotero-ai-bridge-pref-endpoint-heading"/></label>
+			<label><html:h2 id="zab-endpoint-heading" data-l10n-id="zotero-reading-bridge-pref-endpoint-heading"/></label>
 
 			<hbox align="center">
-				<label data-l10n-id="zotero-ai-bridge-pref-status-label"/>
+				<label data-l10n-id="zotero-reading-bridge-pref-status-label"/>
 				<label id="zab-status" role="status"/>
 			</hbox>
 
 			<hbox align="center">
-				<label data-l10n-id="zotero-ai-bridge-pref-address-label" control="zab-address"/>
+				<label data-l10n-id="zotero-reading-bridge-pref-address-label" control="zab-address"/>
 				<html:input id="zab-address" type="text" readonly="true" size="42"/>
-				<button id="zab-copy-address" data-l10n-id="zotero-ai-bridge-pref-copy-address"/>
+				<button id="zab-copy-address" data-l10n-id="zotero-reading-bridge-pref-copy-address"/>
 			</hbox>
 
-			<hbox align="center">
-				<label data-l10n-id="zotero-ai-bridge-pref-alias-label" control="zab-alias"/>
-				<html:input id="zab-alias" type="text" readonly="true" size="42"/>
-			</hbox>
-
-			<label data-l10n-id="zotero-ai-bridge-pref-port-note"/>
+			<label data-l10n-id="zotero-reading-bridge-pref-port-note"/>
 		</groupbox>
 
 		<groupbox aria-labelledby="zab-clients-heading">
-			<label><html:h2 id="zab-clients-heading" data-l10n-id="zotero-ai-bridge-pref-clients-heading"/></label>
+			<label><html:h2 id="zab-clients-heading" data-l10n-id="zotero-reading-bridge-pref-clients-heading"/></label>
 
-			<label data-l10n-id="zotero-ai-bridge-pref-codex-description"/>
+			<label data-l10n-id="zotero-reading-bridge-pref-codex-description"/>
 
 			<separator class="thin"/>
 
-			<label data-l10n-id="zotero-ai-bridge-pref-claude-description"/>
+			<label data-l10n-id="zotero-reading-bridge-pref-claude-description"/>
 
-			<html:span id="zab-copied" role="status" hidden="hidden" data-l10n-id="zotero-ai-bridge-pref-copied"/>
+			<html:span id="zab-copied" role="status" hidden="hidden" data-l10n-id="zotero-reading-bridge-pref-copied"/>
 		</groupbox>
 
 		<groupbox aria-labelledby="zab-security-heading">
-			<label><html:h2 id="zab-security-heading" data-l10n-id="zotero-ai-bridge-pref-security-heading"/></label>
-			<label data-l10n-id="zotero-ai-bridge-pref-security-note"/>
-			<label data-l10n-id="zotero-ai-bridge-pref-debug-note"/>
+			<label><html:h2 id="zab-security-heading" data-l10n-id="zotero-reading-bridge-pref-security-heading"/></label>
+			<label data-l10n-id="zotero-reading-bridge-pref-security-note"/>
+			<label data-l10n-id="zotero-reading-bridge-pref-debug-note"/>
 		</groupbox>
 	</vbox>
 </vbox>

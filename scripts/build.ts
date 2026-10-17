@@ -193,7 +193,7 @@ async function stageZotero(ctx: BuildContext): Promise<void> {
 }
 
 /** Global name of the check-only endpoint bundle; it only ever exists inside a stub sandbox. */
-const INSPECTION_GLOBAL = "__zoteroAIBridgeEndpointModule";
+const INSPECTION_GLOBAL = "__zoteroReadingBridgeEndpointModule";
 
 /**
  * Contracts with Zotero that only fail at runtime inside Zotero, proven on the bundles before anything is
@@ -209,7 +209,7 @@ async function assertBundleContracts(ctx: BuildContext, bundled: ReadonlyMap<str
     problems.push(`${ENDPOINT_MODULE}: ${errorMessage(error)}`);
   }
   if (problems.length > 0) throw new Error(`Zotero bundle contract violated:\n  ${problems.join("\n  ")}`);
-  ctx.log("bundle contracts ok (bootstrap hooks, ZoteroAIBridgeMain, endpoint init arity)");
+  ctx.log("bundle contracts ok (bootstrap hooks, ZoteroReadingBridgeMain, endpoint init arity)");
 }
 
 function withVersion(ctx: BuildContext, rel: string, data: Buffer): string {
@@ -334,6 +334,10 @@ export async function runBuild(options: BuildOptions): Promise<BuildInfo> {
     for (const client of CLIENT_PACKAGES) stageTree(ctx, client.sourceDir, client.id, client.manifest);
     stageTree(ctx, SCIENCE_SOURCE_DIR, STAGE_NAMES.science, null);
     await stageDesktop(ctx);
+    // Every distributable carries the project's license and attribution.
+    for (const stageName of [STAGE_NAMES.zotero, "codex", STAGE_NAMES.desktop, STAGE_NAMES.science]) {
+      stage(ctx, stageName, "LICENSE", requireFile(ctx, "LICENSE"));
+    }
 
     await writeArchive(ctx, OUTPUT_NAMES.xpi, stagedEntries(ctx, STAGE_NAMES.zotero));
     const desktopEntries = stagedEntries(ctx, STAGE_NAMES.desktop);

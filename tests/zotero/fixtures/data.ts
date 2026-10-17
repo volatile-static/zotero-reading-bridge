@@ -19,7 +19,7 @@ export const BULK_TITLE_PREFIX = "Bulk fixture item";
 /** Page labels of the generated PDF start at 101 so tests can tell labels from 0-based indexes. */
 export const PDF_FIRST_PAGE_LABEL = 101;
 export const PDF_PAGES: readonly (readonly string[])[] = [
-  ["Zotero AI Bridge fixture document", "Selection target: alpha beta gamma delta", "Page one body text for search."],
+  ["Zotero Reading Bridge fixture document", "Selection target: alpha beta gamma delta", "Page one body text for search."],
   ["Fixture page two underline target", "Second page body text."],
   ["Fixture page three image and ink region", "Third page body text."],
 ];

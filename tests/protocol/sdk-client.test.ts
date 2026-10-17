@@ -102,7 +102,7 @@ for (const version of ["2025-11-25", "2025-06-18"] as const) {
 
       it("initializes and negotiates the requested version", () => {
         assert.equal(transport.protocolVersion, version);
-        assert.deepEqual(client.getServerVersion(), { name: "zotero-ai-bridge", title: "Zotero AI Bridge", version: TEST_SERVER_VERSION });
+        assert.deepEqual(client.getServerVersion(), { name: "zotero-reading-bridge", title: "Zotero Reading Bridge", version: TEST_SERVER_VERSION });
         assert.deepEqual(client.getServerCapabilities(), { tools: { listChanged: false } });
         assert.equal(client.getInstructions(), "Test instructions.");
         const [initialize] = log;
@@ -211,24 +211,24 @@ describe("raw client sequences", () => {
     const init = await postJson(
       server,
       { jsonrpc: "2.0", id: 0, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: { elicitation: {} }, clientInfo: { name: "codex-mcp-client", title: "Codex", version: "0.162.0" } } },
-      { path: "/codex/mcp", headers: accept },
+      { path: "/bridge/mcp", headers: accept },
     );
     assert.equal(init.status, 200);
     assert.equal(init.headers.get("content-type"), "application/json", "exact lowercase media type (Codex starts_with check)");
     assert.equal(init.json.result.protocolVersion, "2025-06-18");
 
     const headers = { ...accept, "mcp-protocol-version": "2025-06-18" };
-    const initialized = await postJson(server, { jsonrpc: "2.0", method: "notifications/initialized" }, { path: "/codex/mcp", headers });
+    const initialized = await postJson(server, { jsonrpc: "2.0", method: "notifications/initialized" }, { path: "/bridge/mcp", headers });
     assert.equal(initialized.status, 202);
     assert.equal(initialized.text, "");
 
-    const list = await postJson(server, { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }, { path: "/codex/mcp", headers });
+    const list = await postJson(server, { jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }, { path: "/bridge/mcp", headers });
     assert.equal(list.json.result.tools.length, TOOL_NAMES.length);
 
     const hook = await postJson(
       server,
       { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "capture_prompt_context", arguments: { client: "codex", session_id: "s", turn_id: "t" }, _meta: { threadId: "s" } } },
-      { path: "/codex/mcp", headers },
+      { path: "/bridge/mcp", headers },
     );
     assert.deepEqual(hook.json.result.content, [{ type: "text", text: HOOK_JSON }]);
   });

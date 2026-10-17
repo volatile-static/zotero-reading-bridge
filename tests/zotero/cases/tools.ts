@@ -70,7 +70,7 @@ export const toolCases: TestCase[] = [
     requires: ["bridge", "fixtures"],
     async run(ctx) {
       const status = await ctx.mcp().tool("get_status");
-      assert.equal(status.bridge.name, "zotero-ai-bridge");
+      assert.equal(status.bridge.name, "zotero-reading-bridge");
       assert.equal(status.bridge.status, "running");
       // No "enabled" field: the bridge has no switch of its own (disabling the plugin removes the endpoint).
       assert.deepEqual(Object.keys(status.bridge).sort(), [
@@ -92,7 +92,6 @@ export const toolCases: TestCase[] = [
         [...status.bridge.endpoints].sort((a: any, b: any) => a.path.localeCompare(b.path)),
         [
           { path: "/bridge/mcp", url: `http://127.0.0.1:${ctx.port}/bridge/mcp` },
-          { path: "/codex/mcp", url: `http://127.0.0.1:${ctx.port}/codex/mcp` },
         ],
       );
       assert.equal(status.bridge.requestPath, ENDPOINT_PATH);

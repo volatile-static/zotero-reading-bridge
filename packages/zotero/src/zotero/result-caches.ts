@@ -42,7 +42,7 @@ export function startResultCaching(): () => void {
         },
       },
       WATCHED_TYPES,
-      "zotero-ai-bridge-result-cache",
+      "zotero-reading-bridge-result-cache",
     );
   } catch {
     return () => {};

@@ -2,7 +2,7 @@
 
 先做两件事：
 
-1. 打开 Zotero 设置中的「Zotero AI Bridge」页面，确认状态为“运行中”，并记下实际地址（端口）。没有这个页面时，
+1. 打开 Zotero 设置中的「Zotero Reading Bridge」页面，确认状态为“运行中”，并记下实际地址（端口）。没有这个页面时，
    先在 **工具 → 插件** 中确认插件已安装并启用。
 2. 按 [install-zotero.md](install-zotero.md) 第 5 节，用 PowerShell 直接调用一次 `get_status`。这一步通过，说明 Zotero 端正常，
    问题在客户端配置；这一步失败，先按第 1 节排查 Zotero 端。
@@ -13,11 +13,11 @@
 |---|---|---|
 | 拒绝连接（ECONNREFUSED / “无法连接”） | Zotero 没有运行；Zotero 的 HTTP 服务器被关闭；端口不是 23119 | 启动 Zotero；在 **设置 → 高级 → 杂项** 中如显示「Zotero HTTP 服务器已禁用。」，点「启用并重启」；核对设置页显示的端口 |
 | 用 `localhost` 连接失败，用 `127.0.0.1` 正常 | `localhost` 可能先解析到 IPv6 `::1`，而 Zotero 只监听 IPv4 回环地址 | 所有配置都写 `127.0.0.1` |
-| HTTP 404 | 插件未安装或被禁用；路径不是 `/bridge/mcp`（或 `/codex/mcp`） | 在 **工具 → 插件** 中确认插件已安装并启用（重新启用立即生效，无需重启 Zotero）；核对路径 |
+| HTTP 404 | 插件未安装或被禁用；路径不是 `/bridge/mcp` | 在 **工具 → 插件** 中确认插件已安装并启用（重新启用立即生效，无需重启 Zotero）；核对路径 |
 | 设置页状态为「Zotero 的本地 HTTP 服务器未运行，无法提供端点。……」 | Zotero 的 HTTP 服务器没有启动（被关闭，或端口被其他程序占用导致绑定失败） | 在 **设置 → 高级 → 杂项** 中点「启用并重启」；端口被占用时按 [install-zotero.md](install-zotero.md) 第 6 节换端口 |
 | 设置页状态为「未启动：无法确认 Zotero 的 HTTP 服务器只接受本机（127.0.0.1）的连接。」 | 插件无法确认服务器只监听本机（例如未来的 Zotero 版本改了服务器代码） | 插件出于安全考虑不注册端点，也没有绕过的开关；请报告问题并附上 Zotero 版本 |
 | 设置页状态为「错误：……」 | 插件初始化失败（英文说明，不含文献库内容） | 重启 Zotero；仍然出现时报告问题并附上这段说明 |
-| 连接建立后被直接关闭，没有任何响应 | 请求带 `Origin` 头，或 User-Agent 以 `Mozilla/` 开头（浏览器、PowerShell 的 `Invoke-RestMethod` 默认值），被 Zotero 当作浏览器请求拦截 | 命令行测试时显式设置 User-Agent（`-UserAgent 'zotero-ai-bridge-check'`）；浏览器网页本来就不允许访问 |
+| 连接建立后被直接关闭，没有任何响应 | 请求带 `Origin` 头，或 User-Agent 以 `Mozilla/` 开头（浏览器、PowerShell 的 `Invoke-RestMethod` 默认值），被 Zotero 当作浏览器请求拦截 | 命令行测试时显式设置 User-Agent（`-UserAgent 'zotero-reading-bridge-check'`）；浏览器网页本来就不允许访问 |
 | HTTP 400，正文为 `Bad request`（HTTP/1.1 请求，所有客户端都是） | Host 头不是 `127.0.0.1:<端口>` / `localhost:<端口>`：外部主机名（经过代理、用了局域网 IP），或端口与 Zotero 实际端口不一致。Zotero 内置的 HTTP 服务器在 Zotero 和插件之前就拒绝了它 | 直接连接 `127.0.0.1`，不要经过代理；使用设置页显示的地址 |
 | HTTP 400，正文为 `Invalid Host header` | 只出现在 HTTP/1.0 请求中：Host 头不是 `127.0.0.1` / `localhost` / `[::1]`（由 Zotero 拒绝） | 同上 |
 | HTTP 403 | 请求带了 `Origin`（例如浏览器页面附加了 `X-Zotero-Connector-API-Version` 头，Zotero 因此没有断开它），或 HTTP/1.0 请求的 Host 端口与 Zotero 实际端口不一致 | 去掉 `Origin`；使用设置页显示的地址 |
@@ -29,14 +29,14 @@
 
 ## 2. Codex 桌面版
 
-- 安装失败：确认使用 zotero-ai-bridge-desktop.zip，在 Plugins → Add → New Plugin 导入；无需解压。
+- 安装失败：确认使用 zotero-reading-bridge-desktop.zip，在 Plugins → Add → New Plugin 导入；无需解压。
 - 工具不可用：确认 Node.js 可用、Zotero 已启动且 Bridge 已启用，再新建本地对话。
 - 没有自动快照：检查 Hook 是否获得信任；也可要求模型调用 get_current_context。
 - 工具重复或仍使用旧配置：清理旧安装留下的同名服务器和 Hook，再启用拖拽安装的插件。
 
 ## 3. Claude 桌面版
 
-在设置 → 扩展导入 zotero-ai-bridge-claude-desktop.mcpb。连接失败时核对 Zotero 状态和扩展端口，重新启用扩展或完全重启 Claude。详见 [安装说明](install-claude-desktop.md)。
+在设置 → 扩展导入 zotero-reading-bridge-claude-desktop.mcpb。连接失败时核对 Zotero 状态和扩展端口，重新启用扩展或完全重启 Claude。详见 [安装说明](install-claude-desktop.md)。
 
 ## 4. 快照内容
 
@@ -69,7 +69,7 @@
 ## 6. 日志
 
 - Zotero：**帮助 → 调试日志 → 启用**（或「重启为启用日志模式…」），重现问题后点「查看输出日志」。本插件的日志行以
-  `[Zotero AI Bridge]` 开头，只包含方法、工具名、状态码、字节数和耗时，响应内容已屏蔽。
+  `[Zotero Reading Bridge]` 开头，只包含方法、工具名、状态码、字节数和耗时，响应内容已屏蔽。
 - **注意**：调试日志开启期间，Zotero 自身会记录：每个请求的全部请求头和请求正文前 1000 个字符（包括工具参数）；工具调用中经手的
   附件的绝对路径和文件名（例如文件缺失时 `Attachment file '<路径>' not found`，路径含 Windows 用户名，文件名通常是“作者 - 年份 - 标题.pdf”）；
   数据库查询的全部参数（例如条目网址、检索条件的值）；全文检索的检索词与缓存文件路径。「提交输出日志」会把日志上传到 Zotero 服务器；

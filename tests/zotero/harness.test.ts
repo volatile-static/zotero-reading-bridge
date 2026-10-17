@@ -238,27 +238,27 @@ describe("preferences pane expectations", () => {
     const zh = readBridgeFtl("zh-CN");
     assert.deepEqual([...zh.keys()].sort(), [...en.keys()].sort());
     for (const [id, message] of en) {
-      assert.ok(id.startsWith("zotero-ai-bridge-"), id);
+      assert.ok(id.startsWith("zotero-reading-bridge-"), id);
       assert.deepEqual(Object.keys(zh.get(id)!.attributes), Object.keys(message.attributes), id);
     }
-    assert.equal(renderFtlValue(en.get("zotero-ai-bridge-pref-status-running")!.value!, { port: "23139" }), "Running on 127.0.0.1:23139");
+    assert.equal(renderFtlValue(en.get("zotero-reading-bridge-pref-status-running")!.value!, { port: "23139" }), "Running on 127.0.0.1:23139");
     assert.throws(() => renderFtlValue("{ $port }"), /No value/);
     assert.equal(stripIsolationMarks("\u2068x\u2069"), "x");
   });
 });
 
 describe("debug log privacy check", () => {
-  const prefix = "zotero(3)(+0000001): [Zotero AI Bridge] ";
+  const prefix = "zotero(3)(+0000001): [Zotero Reading Bridge] ";
   test("accepts the bridge's summary lines and ignores other Zotero lines", () => {
     const check = checkBridgeDebugLines(
       [
         "zotero(3)(+0000000): Installing translator 'x'",
-        `${prefix}serving /bridge/mcp and /codex/mcp on 127.0.0.1:23139`,
+        `${prefix}serving /bridge/mcp on 127.0.0.1:23139`,
         `${prefix}POST tools/call get_status -> 200 ok (954 bytes, 0 ms)`,
         `${prefix}POST tools/call (unknown tool) -> 200 rpc-error (120 bytes, 1 ms)`,
         `${prefix}POST tools/call search_items -> 200 tool-error [TypeError] (90 bytes, 2 ms)`,
         `${prefix}GET - -> 405 rejected (143 bytes, 0 ms)`,
-        "zotero(5)(+0000000): [Zotero AI Bridge] response 202 (0 bytes, body redacted)",
+        "zotero(5)(+0000000): [Zotero Reading Bridge] response 202 (0 bytes, body redacted)",
         `${prefix}shutting down (reason 2)`,
       ],
       fixtureTexts(),

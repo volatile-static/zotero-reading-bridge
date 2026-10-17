@@ -34,16 +34,16 @@ function parseFtl(text: string): Map<string, Set<string>> {
 
 const markup = read("content/preferences.xhtml");
 const paneScript = read("content/preferences.ts");
-const ftl = new Map(LOCALES.map((locale) => [locale, parseFtl(read(`locale/${locale}/zotero-ai-bridge.ftl`))]));
+const ftl = new Map(LOCALES.map((locale) => [locale, parseFtl(read(`locale/${locale}/zotero-reading-bridge.ftl`))]));
 
 describe("preferences pane localization", () => {
   const markupIds = [...markup.matchAll(/\bdata-l10n-id="([^"]+)"/g)].map((m) => m[1] ?? "");
-  const scriptIds = [...paneScript.matchAll(/"(zotero-ai-bridge-[\w-]+)"/g)].map((m) => m[1] ?? "");
+  const scriptIds = [...paneScript.matchAll(/"(zotero-reading-bridge-[\w-]+)"/g)].map((m) => m[1] ?? "");
 
   it("uses only prefixed ids, all defined in every locale", () => {
     assert.ok(markupIds.length > 0 && scriptIds.length > 0);
     for (const id of [...markupIds, ...scriptIds]) {
-      assert.match(id, /^zotero-ai-bridge-/, id);
+      assert.match(id, /^zotero-reading-bridge-/, id);
       for (const [locale, messages] of ftl) assert.ok(messages.has(id), `${id} missing in ${locale}`);
     }
   });
@@ -81,7 +81,7 @@ describe("preferences pane markup", () => {
   });
 
   it("links the plugin's Fluent file", () => {
-    assert.match(markup, /<html:link rel="localization" href="zotero-ai-bridge\.ftl"\/>/);
+    assert.match(markup, /<html:link rel="localization" href="zotero-reading-bridge\.ftl"\/>/);
   });
 });
 
@@ -96,7 +96,7 @@ describe("manifest.json", () => {
     assert.equal(manifest.manifest_version, 2);
     assert.deepEqual(manifest.applications.zotero, {
       id: ZOTERO_ADDON_ID,
-      update_url: "https://zotero-ai-bridge.invalid/update.json",
+      update_url: "https://zotero-reading-bridge.invalid/update.json",
       strict_min_version: "10.999",
       strict_max_version: "11.*",
     });

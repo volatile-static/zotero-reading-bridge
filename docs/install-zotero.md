@@ -1,7 +1,7 @@
 # 安装 Zotero 插件
 
-Zotero AI Bridge 的核心是一个 Zotero 插件。它在 Zotero 自带的本机 HTTP 服务器上注册 MCP 端点
-`/bridge/mcp`（别名 `/codex/mcp`），提供 18 个只读工具。Codex、Claude Code 等客户端都连接这个端点。
+Zotero Reading Bridge 的核心是一个 Zotero 插件。它在 Zotero 自带的本机 HTTP 服务器上注册 MCP 端点
+`/bridge/mcp`，提供 18 个只读工具。Codex、Claude Code 等客户端都连接这个端点。
 
 ## 1. 要求
 
@@ -17,7 +17,7 @@ Local API（`/api/`），与本插件无关。
 
 ## 2. 获取 XPI
 
-- 使用发布的 `zotero-ai-bridge.xpi`；或
+- 使用发布的 `zotero-reading-bridge.xpi`；或
 - 在仓库中自行构建：
 
   ```powershell
@@ -26,18 +26,18 @@ Local API（`/api/`），与本插件无关。
   npm run verify     # 校验产物结构、清单与敏感信息
   ```
 
-  生成 `outputs/zotero-ai-bridge.xpi`。
+  生成 `outputs/zotero-reading-bridge.xpi`。
 
 ## 3. 安装
 
 1. 打开 Zotero，菜单 **工具 → 插件**。
 2. 点击插件管理器右上角的齿轮按钮，选择 **Install Plugin From File…**（插件管理器的这一项在中文界面下也可能显示英文），
-   选中 `zotero-ai-bridge.xpi`。也可以直接把 XPI 文件拖到插件管理器窗口中。
+   选中 `zotero-reading-bridge.xpi`。也可以直接把 XPI 文件拖到插件管理器窗口中。
 3. 确认安装。插件是免重启插件，安装后立即生效。
 
 ## 4. 设置页面
 
-打开 **编辑 → 设置**（macOS：Zotero → 设置），左侧会出现「Zotero AI Bridge」页面，分三部分。
+打开 **编辑 → 设置**（macOS：Zotero → 设置），左侧会出现「Zotero Reading Bridge」页面，分三部分。
 
 **本地 MCP 端点**
 
@@ -50,12 +50,11 @@ Local API（`/api/`），与本插件无关。
   | 未启动：无法确认 Zotero 的 HTTP 服务器只接受本机（127.0.0.1）的连接。 | 插件无法确认服务器只监听回环地址，出于安全考虑不注册端点 |
   | 错误：…… | 插件初始化失败（后面是英文说明，不含文献库内容） |
 
-  设置页面没有启用开关。要停止桥接，在 Zotero 中禁用插件（**工具 → 插件**）：两个端点立即注销，客户端会收到 404；设置页面随之消失，
-  已打开的设置窗口自动重新加载，显示其他页面（通常是「常规」）。重新启用插件后端点立即恢复，「Zotero AI Bridge」页面也重新出现，
+  设置页面没有启用开关。要停止桥接，在 Zotero 中禁用插件（**工具 → 插件**）：端点立即注销，客户端会收到 404；设置页面随之消失，
+  已打开的设置窗口自动重新加载，显示其他页面（通常是「常规」）。重新启用插件后端点立即恢复，「Zotero Reading Bridge」页面也重新出现，
   无需重启 Zotero。（页面脚本中还有一条“插件未运行……”的提示，只作为防御性后备，正常使用中不会出现。）
 
-- 「地址」与「别名（同一端点）」：实际地址 `http://127.0.0.1:<端口>/bridge/mcp` 与 `/codex/mcp`。两个路径完全等价，客户端配置统一使用
-  `/bridge/mcp`。端口始终是 Zotero 实际使用的端口。「复制地址」复制主地址。
+- 「地址」显示实际地址 `http://127.0.0.1:<端口>/bridge/mcp`。端口始终是 Zotero 实际使用的端口。「复制地址」复制该地址。
 
 **连接 AI 客户端**
 
@@ -71,7 +70,7 @@ Zotero 会把这类请求当作浏览器请求直接断开）：
 ```powershell
 $body = '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_status","arguments":{}}}'
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:23119/bridge/mcp `
-  -ContentType 'application/json' -UserAgent 'zotero-ai-bridge-check' -Body $body |
+  -ContentType 'application/json' -UserAgent 'zotero-reading-bridge-check' -Body $body |
   ConvertTo-Json -Depth 10
 ```
 
@@ -96,7 +95,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:23119/bridge/mcp `
 一般不需要修改。如果 23119 被占用或你已经改过 Zotero 的端口：
 
 1. 在 **设置 → 高级 → 设置编辑器** 中修改 `extensions.zotero.httpServer.port`，然后**重启 Zotero**（Zotero 只在启动时绑定端口）。
-2. 在「Zotero AI Bridge」设置页面确认新地址。
+2. 在「Zotero Reading Bridge」设置页面确认新地址。
 3. Claude 桌面版在扩展设置中修改 Zotero HTTP port。Codex 安装包默认使用 23119；自定义端口需要开发者调整打包脚本的中继启动参数并重新生成 ZIP。
 
 如果 Zotero 的 HTTP 服务器被关闭，**设置 → 高级 → 杂项** 中会显示「Zotero HTTP 服务器已禁用。」和「启用并重启」按钮。
@@ -129,7 +128,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:23119/bridge/mcp `
 
 ## 8. 停用与卸载
 
-- 临时停用：要停止桥接，在 Zotero 中禁用插件（**工具 → 插件**）。两个端点立即注销（客户端收到 404），Zotero Connector 不受影响；
+- 临时停用：要停止桥接，在 Zotero 中禁用插件（**工具 → 插件**）。端点立即注销（客户端收到 404），Zotero Connector 不受影响；
   重新启用后立即恢复，无需重启 Zotero。
 - 卸载：**工具 → 插件** 中移除插件。插件不在 Zotero 数据目录中写入任何数据，也不修改 Zotero 或 Zotero Connector 的首选项。
 - 同时在 Codex / Claude 桌面版的插件或扩展页面卸载本插件，否则客户端每轮会报连接失败（不影响对话本身）。

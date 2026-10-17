@@ -1,7 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <title>Zotero AI Bridge</title>
-  <rect width="64" height="64" rx="14" fill="#2F5D62"/>
-  <path d="M14 20c6-2 12-2 18 2v24c-6-4-12-4-18-2z" fill="#F4F1EA"/>
-  <path d="M50 20c-6-2-12-2-18 2v24c6-4 12-4 18-2z" fill="#DCE8E4"/>
-  <path d="M10 50c8-7 36-7 44 0" fill="none" stroke="#F4F1EA" stroke-width="3" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Zotero Reading Bridge</title>
+  <desc id="desc">An open ivory book supported by a golden bridge arch on a transparent background.</desc>
+  <defs>
+    <linearGradient id="paper" x1="126" y1="136" x2="246" y2="302" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFCF2"/>
+      <stop offset="1" stop-color="#F2E9D6"/>
+    </linearGradient>
+    <linearGradient id="bridge" x1="104" y1="304" x2="412" y2="406" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2D9A5"/>
+      <stop offset="1" stop-color="#D5AD71"/>
+    </linearGradient>
+  </defs>
+  <path d="M112 142C155 130 206 144 246 174V296C207 271 160 258 112 268V142Z" fill="url(#paper)"/>
+  <path d="M266 174C306 144 357 130 400 142V268C352 258 305 271 266 296V174Z" fill="#D5E9E3"/>
+  <path d="M145 181C170 181 194 188 215 200M145 217C170 217 194 224 215 236" stroke="#426F72" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round"/>
+  <path d="M297 200C318 188 342 181 367 181M297 236C318 224 342 217 367 217" stroke="#426F72" stroke-opacity="0.36" stroke-width="10" stroke-linecap="round"/>
+  <path d="M112 278C160 268 207 281 246 306H266C305 281 352 268 400 278V398H372C359 356 315 332 256 332C197 332 153 356 140 398H112V278Z" fill="url(#bridge)"/>
 </svg>

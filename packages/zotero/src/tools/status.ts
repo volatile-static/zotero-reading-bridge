@@ -19,7 +19,7 @@ export interface StatusResult {
     /** The bridge never modifies Zotero data. */
     readOnly: true;
     endpoints: Array<{ path: string; url: string | null }>;
-    /** Path this request arrived on (/bridge/mcp or the /codex/mcp alias). */
+    /** Path this request arrived on (/bridge/mcp). */
     requestPath: string;
     /** Protocol version of this request (negotiated or from the MCP-Protocol-Version header). */
     protocolVersion: string;

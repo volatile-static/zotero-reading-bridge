@@ -25,10 +25,10 @@ function Invoke-Mcp([string]$Json, [string]$Version) {
   $headers = @{}
   if ($Version) { $headers['MCP-Protocol-Version'] = $Version }
   Invoke-RestMethod -Method Post -Uri $uri -ContentType 'application/json' `
-    -UserAgent 'zotero-ai-bridge-check' -Headers $headers -Body $Json
+    -UserAgent 'zotero-reading-bridge-check' -Headers $headers -Body $Json
 }
 
-# initialize：result.protocolVersion 应为 2025-11-25，serverInfo.name 为 zotero-ai-bridge
+# initialize：result.protocolVersion 应为 2025-11-25，serverInfo.name 为 zotero-reading-bridge
 Invoke-Mcp '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"manual-check","version":"0"}}}' |
   ConvertTo-Json -Depth 10
 

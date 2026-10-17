@@ -30,24 +30,24 @@ declare namespace Zotero {
     const enabled: boolean;
   }
 
-  /** Published by Zotero AI Bridge while it runs, for its preferences pane (src/main.ts). */
-  let ZoteroAIBridge: import("../settings/client-config.js").BridgePaneApi | undefined;
+  /** Published by Zotero Reading Bridge while it runs, for its preferences pane (src/main.ts). */
+  let ZoteroReadingBridge: import("../settings/client-config.js").BridgePaneApi | undefined;
 }
 
-// ---- Zotero AI Bridge bundle contract (owner: runtime) ----
+// ---- Zotero Reading Bridge bundle contract (owner: runtime) ----
 // bootstrap.js evaluates content/bridge.js with `target: globalThis` (the bootstrap sandbox); the bundle assigns
 // this global, which bootstrap.js reads after loading and deletes on shutdown.
 
-interface ZoteroAIBridgeStartupData {
+interface ZoteroReadingBridgeStartupData {
   id: string;
   version: string;
   rootURI: string;
 }
 
-interface ZoteroAIBridgeMainApi {
-  startup(data: ZoteroAIBridgeStartupData): Promise<void>;
+interface ZoteroReadingBridgeMainApi {
+  startup(data: ZoteroReadingBridgeStartupData): Promise<void>;
   /** `reason` is the bootstrap reason constant (APP_SHUTDOWN, ADDON_DISABLE, ...); used for logging only. */
   shutdown(reason: number): void;
 }
 
-declare var ZoteroAIBridgeMain: ZoteroAIBridgeMainApi | undefined;
+declare var ZoteroReadingBridgeMain: ZoteroReadingBridgeMainApi | undefined;

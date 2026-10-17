@@ -102,7 +102,7 @@ export const harnessCases: TestCase[] = [
       const bridge = state.plugins.find((p) => p.id === ZOTERO_ADDON_ID);
       if (ctx.bridgeInstalled) {
         assert.ok(bridge?.isActive, `bridge add-on state ${JSON.stringify(bridge ?? null)}`);
-        for (const endpoint of ["/bridge/mcp", "/codex/mcp"]) {
+        for (const endpoint of ["/bridge/mcp"]) {
           assert.ok(state.endpoints.includes(endpoint), `${endpoint} not registered: ${state.endpoints.join(", ")}`);
         }
       } else {

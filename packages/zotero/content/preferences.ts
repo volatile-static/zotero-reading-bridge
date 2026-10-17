@@ -6,7 +6,7 @@
  * capturing listener on the document receives it. Every listener is attached here because Zotero plans to
  * enforce a chrome CSP that blocks inline handlers.
  */
-import { ENDPOINT_ALIAS_PATH, ENDPOINT_PATH, endpointUrl } from "../../../shared/types/bridge.js";
+import { ENDPOINT_PATH, endpointUrl } from "../../../shared/types/bridge.js";
 import {
   type BridgePaneApi,
   type BridgeState,
@@ -17,10 +17,10 @@ const ROOT_ID = "zab-pane";
 const COPIED_VISIBLE_MS = 2500;
 
 const STATUS_MESSAGE_IDS: Record<BridgeStatusKind, string> = {
-  running: "zotero-ai-bridge-pref-status-running",
-  "server-not-running": "zotero-ai-bridge-pref-status-server-not-running",
-  "loopback-unverified": "zotero-ai-bridge-pref-status-loopback-unverified",
-  error: "zotero-ai-bridge-pref-status-error",
+  running: "zotero-reading-bridge-pref-status-running",
+  "server-not-running": "zotero-reading-bridge-pref-status-server-not-running",
+  "loopback-unverified": "zotero-reading-bridge-pref-status-loopback-unverified",
+  error: "zotero-reading-bridge-pref-status-error",
 };
 
 /** Copy buttons that need a known port; the hook settings do not depend on the address. */
@@ -29,7 +29,7 @@ const ADDRESS_BUTTON_IDS = ["zab-copy-address"] as const;
 function bridgeApi(): BridgePaneApi | undefined {
   // Published on the shared Zotero object by the running plugin (src/main.ts) and removed on shutdown.
   // The pane's tsconfig does not see the sandbox-side declaration, hence the narrow cast.
-  return (Zotero as unknown as { ZoteroAIBridge?: BridgePaneApi }).ZoteroAIBridge;
+  return (Zotero as unknown as { ZoteroReadingBridge?: BridgePaneApi }).ZoteroReadingBridge;
 }
 
 class BridgePane {
@@ -48,7 +48,7 @@ class BridgePane {
 
   private element<T extends Element = Element>(id: string): T {
     const element = this.root.querySelector<T>(`#${id}`);
-    if (!element) throw new Error(`Zotero AI Bridge preferences: missing #${id}`);
+    if (!element) throw new Error(`Zotero Reading Bridge preferences: missing #${id}`);
     return element;
   }
 
@@ -85,10 +85,9 @@ class BridgePane {
         error: state.error ?? "",
       });
     } else {
-      document.l10n?.setAttributes(status, "zotero-ai-bridge-pref-status-unavailable");
+      document.l10n?.setAttributes(status, "zotero-reading-bridge-pref-status-unavailable");
     }
     this.element<HTMLInputElement>("zab-address").value = this.address(ENDPOINT_PATH) ?? "";
-    this.element<HTMLInputElement>("zab-alias").value = this.address(ENDPOINT_ALIAS_PATH) ?? "";
     const hasAddress = state?.port !== undefined && state.port !== null;
     for (const id of ADDRESS_BUTTON_IDS) {
       // XUL boolean attributes count by presence alone in Zotero 11, so toggle rather than set "false".

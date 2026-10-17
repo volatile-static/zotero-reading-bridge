@@ -3,7 +3,7 @@
  * found, so the verifier can print one PASS/FAIL row per check with the reasons.
  */
 import {
-  BRIDGE_NAME,
+  LOCALIZATION_PREFIX,
   DEFAULT_ZOTERO_PORT,
   ENDPOINT_PATH,
   ENDPOINT_PATHS,
@@ -189,7 +189,7 @@ export function ftlProblems(files: FileMap): string[] {
     const ids = new Set<string>();
     for (const name of [...files.keys()].filter((n) => n.startsWith(`locale/${locale}/`) && n.endsWith(".ftl"))) {
       for (const id of ftlMessageIds(readText(files, name))) {
-        if (!id.replace(/^-/, "").startsWith(`${BRIDGE_NAME}-`)) problems.push(`${name}: id "${id}" lacks the ${BRIDGE_NAME}- prefix`);
+        if (!id.replace(/^-/, "").startsWith(LOCALIZATION_PREFIX)) problems.push(`${name}: id "${id}" lacks the ${LOCALIZATION_PREFIX} prefix`);
         if (ids.has(id)) problems.push(`${name}: duplicate id "${id}"`);
         ids.add(id);
       }
@@ -214,7 +214,7 @@ function isDevArtifact(name: string): boolean {
  * The global contract between the two scripts, proven by loading them the way Zotero does: plugins.js
  * evaluates bootstrap.js into the plugin sandbox and resolves hooks as `scope[method] || evalInSandbox(method)`;
  * bootstrap.js then evaluates content/bridge.js into that same sandbox (`target: globalThis`), which must add
- * exactly ZoteroAIBridgeMain {startup, shutdown}, leave the hooks alone, and stay deletable for shutdown.
+ * exactly ZoteroReadingBridgeMain {startup, shutdown}, leave the hooks alone, and stay deletable for shutdown.
  */
 export function bundleContractProblems(bootstrapCode: string, bridgeCode: string): string[] {
   const sandbox = createSandbox();
@@ -251,10 +251,10 @@ export function bundleContractProblems(bootstrapCode: string, bridgeCode: string
 /**
  * plugins.js can call startup() twice without a shutdown in between (onOperationCancelled after an uninstall and
  * reinstall in one session). Every startup re-evaluates content/bridge.js, whose fresh closure cannot reach the
- * earlier runtime, so bootstrap.js itself must shut the previous ZoteroAIBridgeMain down before loading the bundle
+ * earlier runtime, so bootstrap.js itself must shut the previous ZoteroReadingBridgeMain down before loading the bundle
  * again; otherwise that runtime's endpoints (whenever the new runtime does not serve), Notifier observer,
  * response-code patch and pane are never released, not even by a later disable. Checked with a script loader stub
- * that publishes a recording ZoteroAIBridgeMain on every load; startup() runs synchronously up to its first await.
+ * that publishes a recording ZoteroReadingBridgeMain on every load; startup() runs synchronously up to its first await.
  */
 export function restartProblems(bootstrapCode: string): string[] {
   const events: string[] = [];
@@ -283,7 +283,7 @@ export function restartProblems(bootstrapCode: string): string[] {
   const startup = sandbox.lookup("startup");
   const shutdown = sandbox.lookup("shutdown");
   if (typeof startup !== "function" || typeof shutdown !== "function") return [];
-  const data = { id: ZOTERO_ADDON_ID, version: "0.0.0", rootURI: "jar:file:///zotero-ai-bridge.xpi!/" };
+  const data = { id: ZOTERO_ADDON_ID, version: "0.0.0", rootURI: "jar:file:///zotero-reading-bridge.xpi!/" };
   try {
     void startup(data, 3);
     void startup(data, 3);
@@ -318,6 +318,9 @@ export function endpointRegistrationProblems(inspectionCode: string, globalName:
   for (const path of ENDPOINT_PATHS) {
     if (endpoints[path] !== endpoint) problems.push(`${path} is not registered with the same endpoint class`);
   }
+  for (const path of Object.keys(endpoints)) {
+    if (!(ENDPOINT_PATHS as readonly string[]).includes(path)) problems.push(`unexpected endpoint registered: ${path}`);
+  }
   const instance = new (endpoint as new () => Record<string, unknown>)();
   const init = instance["init"];
   if (typeof init !== "function") problems.push("endpoint instances have no init()");
@@ -329,13 +332,19 @@ export function endpointRegistrationProblems(inspectionCode: string, globalName:
 
   const unregister = isRecord(registration) ? registration["unregister"] : undefined;
   if (typeof unregister !== "function") return [...problems, "registerEndpoints() returned no unregister()"];
-  const [primary, ...aliases] = ENDPOINT_PATHS;
-  const foreign = function foreignEndpoint(): void {};
-  for (const alias of aliases) endpoints[alias] = foreign;
   unregister.call(registration);
-  if (primary !== undefined && primary in endpoints) problems.push(`unregister() left ${primary} registered`);
-  for (const alias of aliases) {
-    if (endpoints[alias] !== foreign) problems.push(`unregister() removed ${alias}, which another endpoint had taken over`);
+  for (const path of ENDPOINT_PATHS) {
+    if (path in endpoints) problems.push(`unregister() left ${path} registered`);
+  }
+  // A second registration checks ownership independently of the number of endpoint paths.
+  const replacement: unknown = register({ registry: inertStub(), serverVersion: "0.0.0", instructions: "", port: DEFAULT_ZOTERO_PORT });
+  const foreign = function foreignEndpoint(): void {};
+  endpoints[ENDPOINT_PATH] = foreign;
+  const release = isRecord(replacement) ? replacement["unregister"] : undefined;
+  if (typeof release !== "function") problems.push("second registerEndpoints() returned no unregister()");
+  else {
+    release.call(replacement);
+    if (endpoints[ENDPOINT_PATH] !== foreign) problems.push(`unregister() removed ${ENDPOINT_PATH}, which another endpoint had taken over`);
   }
   return problems;
 }

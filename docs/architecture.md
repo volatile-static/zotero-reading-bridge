@@ -2,21 +2,21 @@
 
 ## 1. 总览
 
-Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 插件在 Zotero 自带的本机 HTTP 服务器上注册一个
+Zotero Reading Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 插件在 Zotero 自带的本机 HTTP 服务器上注册一个
 无状态的 MCP 端点；客户端（Codex、Claude Code、其他 MCP 客户端）通过 HTTP 调用它；只支持 stdio 的 Claude 桌面应用经一个
 子进程中继调用它（决策 22）。所有工具只读。
 
 ```
 同一台电脑
 │
-├─ Codex（CLI / 桌面版）插件 zotero-ai-bridge
-│    ├─ 技能 zotero（zotero-ai-bridge:zotero）
+├─ Codex（CLI / 桌面版）插件 zotero-reading-bridge
+│    ├─ 技能 zotero（zotero-reading-bridge:zotero）
 │    ├─ MCP 服务器 zotero_bridge ───────────────┐
 │    └─ UserPromptSubmit Hook → zotero_bridge    │
 │                                                │
-├─ Claude Code 插件 zotero-ai-bridge             │   POST http://127.0.0.1:23119/bridge/mcp
-│    ├─ 技能 zotero                               │   （别名 /codex/mcp，行为完全相同）
-│    ├─ MCP 服务器 plugin:zotero-ai-bridge:zotero ┤
+├─ Claude Code 插件 zotero-reading-bridge             │   POST http://127.0.0.1:23119/bridge/mcp
+│    ├─ 技能 zotero                               │   （仅提供 /bridge/mcp）
+│    ├─ MCP 服务器 plugin:zotero-reading-bridge:zotero ┤
 │    └─ UserPromptSubmit Hook → 同上               │
 │                                                │
 ├─ Claude 桌面应用（无 Hook）                     │
@@ -114,7 +114,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 | 工具结果 | 每个结果只有一个 text 内容，内容是普通的 `JSON.stringify` 文本（`capture_prompt_context` 是 Hook JSON）；所有工具都不声明 `outputSchema`，也不返回 `structuredContent`。 |
 | 响应格式 | `Content-Type: application/json`（小写）、非空响应的 `Content-Length` 为字节长度、`Connection: close`；JSON-RPC 外层把所有非 ASCII 字符转义为 `\uXXXX`，因此字节长度等于字符长度，孤立的代理项也保持合法。 |
 | 状态短语 | Zotero 的 `responseCodes` 表缺少 202 / 405 / 406 / 415，插件仅在缺失时补上，关闭时只删除自己补上且未被改动的条目。 |
-| 日志 | 每个响应都传 `logFilter`，Zotero 调试日志中只出现 `"[Zotero AI Bridge] response <状态> (<n> bytes, body redacted)"` 之类的摘要。 |
+| 日志 | 每个响应都传 `logFilter`，Zotero 调试日志中只出现 `"[Zotero Reading Bridge] response <状态> (<n> bytes, body redacted)"` 之类的摘要。 |
 
 ## 5. 安全边界：本机可访问、只读
 
@@ -181,7 +181,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
    优先级更高。用户常已有 `[mcp_servers.zotero]`（其他 Zotero MCP 服务器），会截走 Hook 调用。插件与手动配置**二选一**（与原计划
    “不重复注册”一致）；两者同时存在时 `config.toml` 中的同名条目优先、插件 `.mcp.json` 被忽略，文档只把这一点作为排查依据。
 3. **Claude Code 插件**：清单不声明 `hooks` / `mcpServers`（默认文件会与声明合并）；服务器键 `zotero`，Hook 引用
-   `plugin:zotero-ai-bridge:zotero`（Claude Code 按这个全名精确匹配，带插件前缀，不会与用户的服务器重名）。插件与手动注册使用同一个
+   `plugin:zotero-reading-bridge:zotero`（Claude Code 按这个全名精确匹配，带插件前缀，不会与用户的服务器重名）。插件与手动注册使用同一个
    规范地址；Claude Code 按 URL 去重且手动注册优先，所以文档要求二选一。手动注册名用 `zotero_bridge`（与 Codex 相同）而不是 `zotero`：
    Claude Code 中同名服务器按 local > project > user 覆盖，某个项目里另有 local / project 作用域的 `zotero`（常见于其他 Zotero MCP）时，
    它会顶替 user 作用域的本桥接，settings.json Hook 也会调用到它。
@@ -200,16 +200,16 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
    Claude Code 的探测分类器把 ≥ 500 当作硬失败。因此所有异常都被捕获并转换为 200 + -32603 或工具错误。
 9. **响应字节**：Zotero 只在响应体为空时自动加 `Content-Length: 0`，并以 HTTP/1.0 关闭连接；插件给每个非空响应自行设置
    `Content-Length` 并把非 ASCII 转义，避免依赖“读到连接关闭”的分帧方式（202 空响应不重复设置，以免出现两个同名头）。`Content-Type` 用小写，因为 Codex 区分大小写匹配。
-10. **端点注册**：`/bridge/mcp` 与别名 `/codex/mcp` 指向同一个端点类，`init(req)` 只声明一个参数（Zotero 据此选择调用约定），
+10. **端点注册**：`/bridge/mcp` 指向端点类，`init(req)` 只声明一个参数（Zotero 据此选择调用约定），
     永不抛出异常；插件启动时（Zotero 的 HTTP 服务器在运行且已确认只监听回环地址）注册一次，关闭插件时注销，且只删除仍指向本插件类的路径。
     桥接没有自己的开关：要停止它，在 Zotero 中禁用插件（**工具 → 插件**），端点随之注销。
 11. **端口**：使用 `Zotero.Server.port` 的实际值；修改端口需要重启 Zotero，插件不修改 `httpServer.*` 首选项。
 12. **Zotero 11 API**：单数形式的选择 getter（如 `getSelectedCollection`）在 11.0 beta 上会抛出异常，改用复数形式；条目数据延迟加载，
     后台在界面就绪后按顺序预热；Hook 路径绝不等待冷加载，读不到时返回部分快照并给出警告。
-13. **本地化文件名**：使用 `locale/en-US/zotero-ai-bridge.ftl` 与 `locale/zh-CN/zotero-ai-bridge.ftl`，所有消息 id 以 `zotero-ai-bridge-` 开头。
-14. **清单**：`manifest_version: 2`，`applications.zotero.id = zotero-ai-bridge@zotero-ai-bridge.local`，`strict_min_version: 10.999`
+13. **本地化文件名**：使用 `locale/en-US/zotero-reading-bridge.ftl` 与 `locale/zh-CN/zotero-reading-bridge.ftl`，所有消息 id 以 `zotero-reading-bridge-` 开头。
+14. **清单**：`manifest_version: 2`，`applications.zotero.id = zotero-reading-bridge@zotero-reading-bridge.local`，`strict_min_version: 10.999`
     （让 11.0 beta 也能安装）、`strict_max_version: 11.*`；`update_url` 是 Zotero 要求的必填字段，填写永远无法解析的
-    `https://zotero-ai-bridge.invalid/update.json`，不发布任何更新。
+    `https://zotero-reading-bridge.invalid/update.json`，不发布任何更新。
 15. **Claude Science**：当前版本不兼容（0.1.62 静态分析，0.1.63 实测添加连接器报 `safeFetch: https-only`），只交付无 Hook 技能与复测说明（见 [connect-claude-science.md](connect-claude-science.md)）。
 16. **不声明 `outputSchema`**：MCP 规定声明了 `outputSchema` 的工具在每个成功结果中都必须带符合该 Schema 的 `structuredContent`，
     客户端（例如官方 TypeScript SDK）会校验，不符合就把整个调用当作失败；而两个客户端的 Hook 路径只读取 text 内容，忽略
@@ -243,7 +243,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
     - 隧道、端口转发、反向代理和**监听端口的中继**仍然禁止：它们打开新的可连接入口（局域网、公网或另一个回环端口），把无鉴权的
       文献库交给更多的程序或机器。早先文档中“不提供本地中继进程”指的正是这一类，以及为绕过 Claude Science 沙箱而运行的转发程序。
     - 目标主机写死为 `127.0.0.1`，只有端口可配置；`--host` 只接受 `127.0.0.1`，其他值（`localhost`、`::1`、`0.0.0.0`、局域网地址）直接
-      以退出码 2 结束。使用专用的 `http.Agent`，不读取代理环境变量；请求不带 `Origin`，User-Agent 为 `zotero-ai-bridge-relay/<版本>`，
+      以退出码 2 结束。使用专用的 `http.Agent`，不读取代理环境变量；请求不带 `Origin`，User-Agent 为 `zotero-reading-bridge-relay/<版本>`，
       所以 Zotero 与插件的 Origin / 浏览器检查（决策 17）照常生效。
     - 中继不做协议处理（不解析参数、不缓存、不发 `Mcp-Session-Id`），只在 `initialize` 成功后把协商的版本放进 `MCP-Protocol-Version`
       头；日志只写方法名和 HTTP 状态。冒充风险（第 5 节）不变：Zotero 未运行时占用端口的程序同样能回答中继。
@@ -274,12 +274,12 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 | 主题 | 原计划 | 实际实现 | 原因 |
 |---|---|---|---|
 | Codex 插件布局 | 插件根目录放 `plugin.json`、`mcp.json` 与 `hooks/hooks.json` | `.codex-plugin/plugin.json` + `.mcp.json` + `hooks/hooks.json` | Codex 0.162 忽略不带 agent-plugins.org `$schema` 的根目录 `plugin.json`；带 `$schema` 的布局又禁止在 `mcp.json` 中设置超时（决策 1）。 |
-| Codex 安装方式 | 桌面安装包 | 在 Plugins → Add → New Plugin 拖入 zotero-ai-bridge-desktop.zip | 用户于 2026-10-17 确认导入成功，内置与 Claude 桌面版共用的 stdio 中继。 |
-| MCP 服务器名 | 未规定名字；只要求 Hook 引用实际连接名（Claude Code 插件内置服务器写 `plugin:<plugin-name>:<server-name>`，手动注册用实际注册名） | Codex：`zotero_bridge`；Claude Code：插件内键 `zotero`（Hook 中写 `plugin:zotero-ai-bridge:zotero`），手动注册名 `zotero_bridge` | 属于补充规定：`zotero` 常被其他 Zotero MCP 服务器占用。Codex 中 `config.toml` 的同名条目会截走 Hook 调用；Claude Code 中 local / project 作用域的同名服务器会覆盖 user 作用域的手动注册（决策 2、3）。 |
+| Codex 安装方式 | 桌面安装包 | 在 Plugins → Add → New Plugin 拖入 zotero-reading-bridge-desktop.zip | 旧名称包于 2026-10-17 确认导入成功；新名称包内置与 Claude 桌面版共用的 stdio 中继。 |
+| MCP 服务器名 | 未规定名字；只要求 Hook 引用实际连接名（Claude Code 插件内置服务器写 `plugin:<plugin-name>:<server-name>`，手动注册用实际注册名） | Codex：`zotero_bridge`；Claude Code：插件内键 `zotero`（Hook 中写 `plugin:zotero-reading-bridge:zotero`），手动注册名 `zotero_bridge` | 属于补充规定：`zotero` 常被其他 Zotero MCP 服务器占用。Codex 中 `config.toml` 的同名条目会截走 Hook 调用；Claude Code 中 local / project 作用域的同名服务器会覆盖 user 作用域的手动注册（决策 2、3）。 |
 | Hook 输入 | 只传客户端及会话 / 本轮标识：Codex 为 `client` + `${turn_id}`，Claude Code 为 `client` + `${session_id}`；不传用户问题全文、会话记录路径或记录内容 | Codex：`client`、`session_id`、`turn_id`；Claude Code：`client`、`session_id`、`prompt_id`（可能为空，视为没有）；同样不传提示词、工作目录或记录路径 | 在原计划的标识之外各补一个本端确实存在的占位符，使 snapshotId 能区分会话与同一会话中的各条提示（Claude Code 没有 `turn_id`）；Codex 遇到不存在的占位符会让 Hook 失败，所以两端的 Hook 定义（原计划本来就分两份文件）只用各自的占位符（决策 4）。 |
 | Claude Code 注册 | 安装说明区分插件内置 MCP 与 CLI 手动添加，不重复注册；手动注册时 Hook 用实际注册名 | 一致（二选一），并写明原因与改用插件时的清理步骤：删除手动服务器**和** settings.json 中的手动 Hook | 补充原因：Claude Code 按 URL 去重且手动注册优先，并存会隐藏插件服务器、使插件 Hook 失效（已实测）；只删服务器会留下每轮报错的 Hook。 |
-| 启用开关与 `prefs.js` | 设置页含启用开关；建议布局含 `packages/zotero/prefs.js` | prefs.js 删除：插件不再有自有偏好项；关闭桥接使用 Zotero 的插件禁用（**工具 → 插件**），设置页没有启用开关 | 自有开关与 Zotero 内置的插件禁用重复：禁用插件同样立即注销两个端点、不影响 Connector（集成测试 lifecycle.addon-toggle），不必再维护首选项观察器和运行中的重新注册；原计划“禁用或卸载时注销两个 endpoint”不变。Zotero 允许插件不带 `prefs.js`（`plugins.js` 忽略找不到该文件的错误）。 |
-| 本地化文件名 | `locale/<语言>/bridge.ftl` | `locale/<语言>/zotero-ai-bridge.ftl`，消息 id 统一加 `zotero-ai-bridge-` 前缀 | Zotero 11 把所有插件的 FTL 合并到同一个命名空间，并只读取 `locale/<语言>/` 顶层文件；通用文件名和消息 id 容易与其他插件冲突（决策 13）。 |
+| 启用开关与 `prefs.js` | 设置页含启用开关；建议布局含 `packages/zotero/prefs.js` | prefs.js 删除：插件不再有自有偏好项；关闭桥接使用 Zotero 的插件禁用（**工具 → 插件**），设置页没有启用开关 | 自有开关与 Zotero 内置的插件禁用重复：禁用插件同样立即注销端点、不影响 Connector（集成测试 lifecycle.addon-toggle），不必再维护首选项观察器和运行中的重新注册；新版仅注册和注销一个端点。Zotero 允许插件不带 `prefs.js`（`plugins.js` 忽略找不到该文件的错误）。 |
+| 本地化文件名 | `locale/<语言>/bridge.ftl` | `locale/<语言>/zotero-reading-bridge.ftl`，消息 id 统一加 `zotero-reading-bridge-` 前缀 | Zotero 11 把所有插件的 FTL 合并到同一个命名空间，并只读取 `locale/<语言>/` 顶层文件；通用文件名和消息 id 容易与其他插件冲突（决策 13）。 |
 | 带 Origin 的请求 | 缺失 Origin 可接受，存在 Origin 则拒绝（含 null）；不开放 CORS | 大多数带 `Origin` 或浏览器 User-Agent 的请求先被 Zotero 自身直接断开（连接关闭，没有 403）；带 `X-Zotero-Connector-API-Version` / `Zotero-Allowed-Request` 头的请求不会被断开，到达插件后一律 403；插件从不发送 CORS 头，Zotero 只对 `https://www.zotero.org` 附加它自己的 CORS 头 | 若要对所有浏览器请求都自己返回 403，就必须打开 `allowRequestsFromUnsafeWebContent`，让浏览器请求进入插件代码；保持 Zotero 的“直接断开”更安全。插件的 Origin 规则是绕过 Zotero 检查的那类请求唯一的屏障（决策 17）。 |
 | `server/discover` 探测 | 未涉及（2026-07-28 晚于原计划） | 无论是否带 2026-07-28 版本头，一律 HTTP 400 + `-32601` 并回显 id；其他带不支持版本头的请求 400 + `-32600` | 两个客户端的探测分类器在收到回显 id 的“方法不存在”（`-32601`）时才判定为旧协议服务器并回退到 `initialize`；未回显 id 的错误、其他错误码、非 JSON 的 400、401 / 403 / 5xx 都会被判定为硬失败（决策 6）。 |
 | 错误状态码 | 未规定（只要求协议错误与工具执行错误按 MCP 格式返回）；常见实现用 500 / 503 表示内部错误或“未就绪” | **从不返回 5xx**：内部异常变成 HTTP 200 + JSON-RPC `-32603` 或 `isError` 工具结果；桥接关闭时注销端点，由 Zotero 返回 404 | Zotero 自身在 `init` 抛异常时写出格式错误的 500；Codex 把 5xx 当作可重试的传输失败，Claude Code 的探测把 ≥ 500 当作硬失败（决策 8）。 |

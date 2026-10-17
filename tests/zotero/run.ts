@@ -2,7 +2,7 @@
  * Live Zotero integration harness (DESIGN 2.G). `npm run test:zotero` runs it.
  *
  * Launches the installed Zotero as a SEPARATE instance (`-profile <throwaway> -no-remote -datadir
- * <throwaway>`) on port 23139 with the test-only seed plugin and, when outputs/zotero-ai-bridge.xpi has
+ * <throwaway>`) on port 23139 with the test-only seed plugin and, when outputs/zotero-reading-bridge.xpi has
  * been built, the bridge add-on. Seeds the fixture library, runs every case over HTTP, shuts down only
  * the process it launched, and proves the user's real Zotero profile was not touched.
  *
@@ -239,7 +239,7 @@ function debugLogPrivacy(options: Options, bridgeSkipReason: string | null, proc
   const check = checkBridgeDebugLines(fs.readFileSync(proc.logFile, "utf8").split(/\r?\n/), fixtureTexts());
   // Zero lines would prove nothing (e.g. -ZoteroDebugText ignored), so it fails too.
   const problems = [
-    ...(check.bridgeLines === 0 ? ["no [Zotero AI Bridge] lines in the debug output"] : []),
+    ...(check.bridgeLines === 0 ? ["no [Zotero Reading Bridge] lines in the debug output"] : []),
     ...check.unexpected.map((line) => `unexpected line: ${line}`),
     ...check.leaking.map((line) => `fixture text in: ${line}`),
   ];

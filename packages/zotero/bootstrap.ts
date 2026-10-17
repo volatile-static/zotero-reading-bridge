@@ -6,7 +6,7 @@
  * `method.call(scope, { id, version, rootURI }, reason)`, awaiting a returned promise (`_callMethod`). The
  * IIFE would hide function declarations, so they are assigned onto the sandbox global explicitly. startup()
  * evaluates content/bridge.js (src/main.ts) into this same sandbox; that bundle adds exactly one configurable
- * global, `ZoteroAIBridgeMain = { startup(data), shutdown(reason) }`, which shutdown() deletes again. A startup
+ * global, `ZoteroReadingBridgeMain = { startup(data), shutdown(reason) }`, which shutdown() deletes again. A startup
  * that finds the global still set (no shutdown in between) shuts that runtime down before loading a new one.
  */
 export {};
@@ -17,8 +17,8 @@ interface BootstrapData {
   rootURI: string;
 }
 
-/** Load the runtime bundle into this sandbox; it publishes `globalThis.ZoteroAIBridgeMain`. */
-function loadMain(rootURI: string): ZoteroAIBridgeMainApi {
+/** Load the runtime bundle into this sandbox; it publishes `globalThis.ZoteroReadingBridgeMain`. */
+function loadMain(rootURI: string): ZoteroReadingBridgeMainApi {
   Services.scriptloader.loadSubScriptWithOptions(`${rootURI}content/bridge.js`, {
     target: globalThis,
     // A new plugin version must not run a cached copy of the previous bundle.
@@ -26,8 +26,8 @@ function loadMain(rootURI: string): ZoteroAIBridgeMainApi {
     // Plugins load from jar:file: URIs, which the script loader otherwise refuses (Mozilla bug 1974213).
     allowUnsafeURL: true,
   });
-  const main = globalThis.ZoteroAIBridgeMain;
-  if (!main) throw new Error("content/bridge.js did not define ZoteroAIBridgeMain");
+  const main = globalThis.ZoteroReadingBridgeMain;
+  if (!main) throw new Error("content/bridge.js did not define ZoteroReadingBridgeMain");
   return main;
 }
 
@@ -36,9 +36,9 @@ async function startup({ id, version, rootURI }: BootstrapData, reason: number):
   // uninstall + reinstall in one session). loadMain() evaluates a fresh bundle whose runtime cannot see the old
   // one, so stop the previous runtime here, or its endpoints (kept whenever the new runtime does not serve),
   // Notifier observer, response-code patch and preferences pane would outlive every later disable.
-  const previous = globalThis.ZoteroAIBridgeMain;
+  const previous = globalThis.ZoteroReadingBridgeMain;
   if (previous) {
-    delete globalThis.ZoteroAIBridgeMain;
+    delete globalThis.ZoteroReadingBridgeMain;
     try {
       previous.shutdown(reason);
     } catch (e) {
@@ -50,9 +50,9 @@ async function startup({ id, version, rootURI }: BootstrapData, reason: number):
 
 /** Runs for app shutdown, disable, uninstall and upgrade alike: always release endpoints and observers. */
 function shutdown(_data: BootstrapData, reason: number): void {
-  const main = globalThis.ZoteroAIBridgeMain;
+  const main = globalThis.ZoteroReadingBridgeMain;
   // Drop the global first, so even a failing runtime shutdown leaves nothing stale for the next startup.
-  delete globalThis.ZoteroAIBridgeMain;
+  delete globalThis.ZoteroReadingBridgeMain;
   main?.shutdown(reason);
 }
 

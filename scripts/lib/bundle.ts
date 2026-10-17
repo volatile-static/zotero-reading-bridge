@@ -63,7 +63,7 @@ function singleOutput(result: esbuild.BuildResult, entry: string): string {
 /**
  * Bundle one release entry as a plain IIFE. An ESM probe build first reveals the entry's exports, which an
  * IIFE drops silently: entries must assign what Zotero needs to globalThis (a `globalName` var would not do,
- * since bootstrap.js deletes ZoteroAIBridgeMain on shutdown and a top-level var cannot be deleted).
+ * since bootstrap.js deletes ZoteroReadingBridgeMain on shutdown and a top-level var cannot be deleted).
  */
 export async function bundleClassicScript(root: string, spec: BundleSpec): Promise<string> {
   const base = baseOptions(root, spec.entry);

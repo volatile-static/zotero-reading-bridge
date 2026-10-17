@@ -16,7 +16,7 @@ import readline from "node:readline";
 import type { Readable, Writable } from "node:stream";
 import { DEFAULT_ZOTERO_PORT, ENDPOINT_PATH, LOOPBACK_HOST, endpointUrl } from "../../../shared/types/bridge.js";
 
-export const RELAY_NAME = "zotero-ai-bridge-relay";
+export const RELAY_NAME = "zotero-reading-bridge-relay";
 /** JSON-RPC "server error" code used for answers the relay makes up when Zotero cannot answer. */
 export const RELAY_ERROR_CODE = -32000;
 /** Generous: tools/call may wait on Zotero's main thread; the client applies its own, shorter timeouts. */
@@ -230,7 +230,7 @@ export function runRelay(options: RelayOptions, io: RelayIo): Promise<void> {
       log(`${label} -> transport error ${reason}`);
       unreachable(
         info,
-        `Cannot reach the Zotero AI Bridge at ${url} (${reason}). Start Zotero with the Zotero AI Bridge plugin enabled, then retry.`,
+        `Cannot reach the Zotero Reading Bridge at ${url} (${reason}). Start Zotero with the Zotero Reading Bridge plugin enabled, then retry.`,
       );
       return;
     }
@@ -245,9 +245,9 @@ export function runRelay(options: RelayOptions, io: RelayIo): Promise<void> {
     if (result.status === 202 || (result.status >= 200 && result.status < 300 && result.body.length === 0)) return;
     const hint =
       result.status === 404
-        ? "The endpoint is not registered: enable the Zotero AI Bridge plugin in Zotero (Tools > Plugins)."
+        ? "The endpoint is not registered: enable the Zotero Reading Bridge plugin in Zotero (Tools > Plugins)."
         : "The response was not JSON-RPC; check that this port belongs to Zotero.";
-    unreachable(info, `The Zotero AI Bridge at ${url} answered HTTP ${result.status}. ${hint}`);
+    unreachable(info, `The Zotero Reading Bridge at ${url} answered HTTP ${result.status}. ${hint}`);
   }
 
   return new Promise((resolve) => {

@@ -8,7 +8,7 @@ Codex 和 Claude Code 通过 Hook 在每轮消息前自动附加 Zotero 快照�
 | 项目 | 值 |
 |---|---|
 | 传输 | MCP Streamable HTTP（只用 POST + JSON 响应，不使用 SSE，无会话） |
-| 地址 | `http://127.0.0.1:23119/bridge/mcp`（端口以 Zotero 设置页显示为准；别名 `/codex/mcp` 等价） |
+| 地址 | `http://127.0.0.1:23119/bridge/mcp`（端口以 Zotero 设置页显示为准） |
 | 协议版本 | 2025-11-25、2025-06-18、2025-03-26 |
 | 认证 | 无（不要配置令牌或 OAuth） |
 | 主机 | 只能用 `127.0.0.1`。客户端必须与 Zotero 运行在同一台电脑上，并且不能带浏览器的 `Origin` 头或 `Mozilla/` 开头的 User-Agent |

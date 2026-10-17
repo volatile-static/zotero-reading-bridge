@@ -13,7 +13,7 @@
 
 ## 连接前提
 
-Claude Science 必须能以 MCP Streamable HTTP 访问 `http://127.0.0.1:23119/bridge/mcp`，并且 Zotero 正在同一台电脑上运行、Zotero AI Bridge 插件已启用（**工具 → 插件**）。桥接只监听 IPv4 回环地址，没有身份验证，只读。
+Claude Science 必须能以 MCP Streamable HTTP 访问 `http://127.0.0.1:23119/bridge/mcp`，并且 Zotero 正在同一台电脑上运行、Zotero Reading Bridge 插件已启用（**工具 → 插件**）。桥接只监听 IPv4 回环地址，没有身份验证，只读。
 
 ## 为什么不兼容
 
@@ -27,7 +27,7 @@ Claude Science 必须能以 MCP Streamable HTTP 访问 `http://127.0.0.1:23119/b
 
 ## 如何复测（Claude Science 更新后）
 
-1. 启动 Zotero，在 Zotero 设置的「Zotero AI Bridge」页面确认状态为“运行中”，并记下页面显示的实际地址。
+1. 启动 Zotero，在 Zotero 设置的「Zotero Reading Bridge」页面确认状态为“运行中”，并记下页面显示的实际地址。
 2. 先用已验证的客户端（Codex 或 Claude Code）调用一次 `get_status`，确认桥接本身正常。
 3. 在 Claude Science 中打开 Settings > Connectors > Add connector > Remote，URL 填 `http://127.0.0.1:23119/bridge/mcp`，传输选择 Streamable HTTP，不填任何凭据。记录是否被拒绝以及完整的错误文字。
 4. 复测前在 Zotero 中打开 **帮助 → 调试日志 → 启用**（仅复测期间开启，隐私说明见 `docs/install-zotero.md` 第 7 节），以便看到
@@ -35,10 +35,10 @@ Claude Science 必须能以 MCP Streamable HTTP 访问 `http://127.0.0.1:23119/b
 5. 如果连接器被接受：新建对话，让它“调用 get_status”；然后在 Zotero 中选中一个条目，让它“读取我当前在 Zotero 中选中的论文”，确认它调用了 `get_current_context` 并使用返回的 libraryID + key。
 6. 无论第 3、5 步成功与否，检查 Zotero 调试日志中这段时间对 `/bridge/mcp` 的请求（原计划要求实测的三项）：
    - **Origin 请求头 / 浏览器 User-Agent**：请求头中是否有 `origin:`，`user-agent` 是否以 `Mozilla/` 开头，日志中是否出现
-     `Preventing request from browser`（Zotero 因此直接断开连接，客户端只看到连接被关闭），或插件返回了 403（`[Zotero AI Bridge]`
+     `Preventing request from browser`（Zotero 因此直接断开连接，客户端只看到连接被关闭），或插件返回了 403（`[Zotero Reading Bridge]`
      行中的 `-> 403 rejected`）。出现任何一种都记为不兼容，不放宽规则。
    - **回环可达性**：日志中是否出现来自 Claude Science 的请求；完全没有请求时，说明它根本没有连到 `127.0.0.1:23119`。
-   - **JSON-only 兼容性**：`initialize`、`tools/list`、`tools/call` 的 `[Zotero AI Bridge]` 行是否都是 200（通知为 202），客户端是否
+   - **JSON-only 兼容性**：`initialize`、`tools/list`、`tools/call` 的 `[Zotero Reading Bridge]` 行是否都是 200（通知为 202），客户端是否
      接受只返回 `application/json`、不提供 SSE 的服务器（例如是否反复发送 GET 并因 405 失败）。
 
    复测结束后关闭调试日志。

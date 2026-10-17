@@ -30,7 +30,7 @@ export function parseFtl(source: string): Map<string, FtlMessage> {
 }
 
 export function readBridgeFtl(locale: string): Map<string, FtlMessage> {
-  return parseFtl(fs.readFileSync(path.join(REPO_ROOT, "packages", "zotero", "locale", locale, "zotero-ai-bridge.ftl"), "utf8"));
+  return parseFtl(fs.readFileSync(path.join(REPO_ROOT, "packages", "zotero", "locale", locale, "zotero-reading-bridge.ftl"), "utf8"));
 }
 
 /** Formats a value the way Fluent renders it in the UI: variables substituted, bidi isolation marks dropped. */

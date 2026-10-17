@@ -4,7 +4,7 @@
     {
       "name": "get_status",
       "title": "Zotero bridge status",
-      "description": "Check that the Zotero AI Bridge is reachable and report bridge/Zotero versions, the endpoint address, supported MCP protocol versions, and the libraries available. Read-only; call this first when other Zotero tools fail.",
+      "description": "Check that the Zotero Reading Bridge is reachable and report bridge/Zotero versions, the endpoint address, supported MCP protocol versions, and the libraries available. Read-only; call this first when other Zotero tools fail.",
       "inputSchema": {
         "type": "object",
         "properties": {},

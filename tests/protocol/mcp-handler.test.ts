@@ -120,7 +120,7 @@ describe("initialize", () => {
   it("declares only tools and identifies the server", async () => {
     const { json: body } = await call({ body: rpc("initialize", { protocolVersion: "2025-11-25" }) });
     assert.deepEqual(body.result.capabilities, { tools: { listChanged: false } });
-    assert.deepEqual(body.result.serverInfo, { name: "zotero-ai-bridge", title: "Zotero AI Bridge", version: "9.9.9" });
+    assert.deepEqual(body.result.serverInfo, { name: "zotero-reading-bridge", title: "Zotero Reading Bridge", version: "9.9.9" });
     assert.equal(body.result.instructions, "Use search_items first.");
   });
 
@@ -183,8 +183,8 @@ describe("2026-07-28 probe and protocol header", () => {
   });
 
   it("passes the effective version and endpoint path to handlers", async () => {
-    const viaHeader = await callTool("get_status", {}, { headers: { "mcp-protocol-version": "2025-06-18" }, path: "/codex/mcp" });
-    assert.deepEqual(toolPayload(viaHeader.tool).ctx, { protocolVersion: "2025-06-18", endpointPath: "/codex/mcp" });
+    const viaHeader = await callTool("get_status", {}, { headers: { "mcp-protocol-version": "2025-06-18" }, path: "/bridge/mcp" });
+    assert.deepEqual(toolPayload(viaHeader.tool).ctx, { protocolVersion: "2025-06-18", endpointPath: "/bridge/mcp" });
     const headerless = await call({ body: rpc("tools/call", { name: "get_status" }) });
     assert.equal(toolPayload(headerless.json.result).ctx.protocolVersion, "2025-03-26");
   });

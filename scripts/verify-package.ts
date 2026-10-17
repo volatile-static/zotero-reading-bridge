@@ -21,10 +21,7 @@ import {
 } from "./lib/checks.js";
 import { errorMessage, formatTable, isMainModule, repoRootFrom } from "./lib/cli.js";
 import {
-  type IgnoreRule,
   compareStrings,
-  isPathIgnored,
-  loadPackagingIgnoreRules,
   sha256,
   walkFiles,
 } from "./lib/files.js";
@@ -34,7 +31,6 @@ import {
   OUTPUTS_DIR,
   OUTPUT_NAMES,
   PACKAGE_JSON,
-  sourceArchivePrefix,
 } from "./lib/layout.js";
 import { type PackageMetadata, isRecord, readPackageMetadata } from "./lib/manifests.js";
 import { createUpdateManifest } from "./lib/updates.js";
@@ -68,7 +64,6 @@ const ARCHIVES = [
   OUTPUT_NAMES.xpi,
   OUTPUT_NAMES.codex,
   OUTPUT_NAMES.claudeDesktop,
-  OUTPUT_NAMES.source,
 ] as const;
 const MAX_LISTED = 12;
 
@@ -111,23 +106,6 @@ async function readArchive(outputsDir: string, name: string, rows: VerifyRow[]):
   }
 }
 
-function sourceProblems(files: FileMap, version: string, rules: readonly IgnoreRule[]): string[] {
-  const prefix = sourceArchivePrefix(version);
-  const problems: string[] = [];
-  for (const name of files.keys()) {
-    if (!name.startsWith(prefix)) {
-      problems.push(`${name} is outside ${prefix}`);
-      continue;
-    }
-    const rel = name.slice(prefix.length);
-    if (isPathIgnored(rel, rules)) problems.push(`${rel} is excluded (node_modules/.git/work/outputs/*.tsbuildinfo/.gitignore)`);
-  }
-  for (const required of [PACKAGE_JSON, "scripts/build.ts"]) {
-    if (!files.has(`${prefix}${required}`)) problems.push(`missing ${required}`);
-  }
-  return summarize(problems);
-}
-
 function buildInfoProblems(outputsDir: string, version: string): string[] {
   const info: unknown = JSON.parse(fs.readFileSync(path.join(outputsDir, OUTPUT_NAMES.buildInfo), "utf8"));
   if (!isRecord(info)) return ["BUILD-INFO.json is not an object"];
@@ -148,7 +126,7 @@ function buildInfoProblems(outputsDir: string, version: string): string[] {
   return summarize(problems);
 }
 
-/** Scans that apply to every shipped byte. source.zip legitimately contains unexpanded include markers. */
+/** Scans that apply to shipped package contents. */
 function contentScans(contents: readonly PackageContent[], homeDir: string): VerifyRow[] {
   const pathRules = [...ABSOLUTE_PATH_RULES, ...homeDirectoryRules(homeDir)];
   const forbidden: string[] = [];
@@ -162,9 +140,7 @@ function contentScans(contents: readonly PackageContent[], homeDir: string): Ver
       if (reason) forbidden.push(`${label}: ${reason}`);
       secrets.push(...scanContent(where, data, SECRET_RULES));
       paths.push(...scanContent(where, data, pathRules));
-      if (label !== OUTPUT_NAMES.source) {
-        for (const line of findIncludeMarkers(data.toString("utf8"))) markers.push(`${where}:${line}`);
-      }
+      for (const line of findIncludeMarkers(data.toString("utf8"))) markers.push(`${where}:${line}`);
     }
   }
   return [
@@ -234,12 +210,10 @@ export async function verifyPackage(options: VerifyOptions): Promise<VerifyRow[]
   const outputsDir = path.join(root, OUTPUTS_DIR);
   const rows: VerifyRow[] = [];
   let meta: PackageMetadata;
-  let rules: IgnoreRule[];
   try {
     meta = readPackageMetadata(fs.readFileSync(path.join(root, PACKAGE_JSON), "utf8"));
-    rules = loadPackagingIgnoreRules(root);
   } catch (error) {
-    return [{ group: "setup", name: "read package.json and .gitignore", ok: false, detail: errorMessage(error) }];
+    return [{ group: "setup", name: "read package.json", ok: false, detail: errorMessage(error) }];
   }
 
   const version = meta.version;
@@ -285,11 +259,6 @@ export async function verifyPackage(options: VerifyOptions): Promise<VerifyRow[]
     const skill = fs.readFileSync(skillPath);
     contents.push({ label: OUTPUT_NAMES.claudeSkill, files: new Map([[OUTPUT_NAMES.claudeSkill, skill]]) });
     add(OUTPUT_NAMES.claudeSkill, claudeSkillChecks(skill));
-  }
-  const source = await readArchive(outputsDir, OUTPUT_NAMES.source, rows);
-  if (source) {
-    contents.push({ label: OUTPUT_NAMES.source, files: source });
-    add(OUTPUT_NAMES.source, [runCheck("only repository sources (exclusions honoured)", () => sourceProblems(source, version, rules))]);
   }
   const buildInfoPath = path.join(outputsDir, OUTPUT_NAMES.buildInfo);
   if (fs.existsSync(buildInfoPath)) {

@@ -221,7 +221,7 @@ console.log(snapshot);
 |---|---|
 | `npm run typecheck` | 全部 tsconfig 的类型检查（含测试用种子插件与共用中继 `shared/relay/`） |
 | `npm test` | 单元测试（`tests/unit`）、协议测试（`tests/protocol`）与集成测试工具自检（`tests/zotero`）（Node，不启动 Zotero） |
-| `npm run build` | 类型检查 → 打包 → 一次生成三个插件（XPI、Codex ZIP、MCPB）以及 `source.zip`、`BUILD-INFO.json` → 自动运行产物校验 |
+| `npm run build` | 类型检查 → 打包 → 一次生成三个插件（XPI、Codex ZIP、MCPB）以及 `SKILL.md`、`updates.json`、`BUILD-INFO.json` → 自动运行产物校验 |
 | `npm run verify` | 重新校验 `outputs/` 中已有的产物 |
 | `npm run test:zotero` | 在独立的 Zotero 测试配置文件（端口 23139）中运行集成测试，不触碰你的 Zotero 配置和数据 |
 
@@ -234,7 +234,9 @@ console.log(snapshot);
 1. 更新版本号，例如运行 `npm version 0.2.1 --no-git-tag-version`，同步修改 `package.json` 和 `package-lock.json`。插件清单中的版本由构建自动写入。
 2. 提交并推送代码（首次使用时也要包含 `.github/workflows/release.yml`）。
 3. 在 GitHub 的 **Releases → Draft a new release** 中，选择这次提交并创建与版本号一致的标签，例如 `v0.2.1`（也接受 `0.2.1`），填写说明后点击 **Publish release**。无需手动上传附件。
-4. 在 **Actions → Release packages** 查看执行结果。成功后，该 Release 的 Assets 会出现三个安装包、`SKILL.md`、`source.zip`、`updates.json` 和 `BUILD-INFO.json`（包含包大小及 SHA-256）。
+4. 在 **Actions → Release packages** 查看执行结果。成功后，该 Release 的 Assets 会出现三个安装包、`SKILL.md`、`updates.json` 和 `BUILD-INFO.json`（包含包大小及 SHA-256）。
+
+源码使用 GitHub Release 自带的 Source code 下载入口，构建不再额外生成或上传 `source.zip`。
 
 `updates.json` 由构建根据 XPI 自动生成，下载地址固定到本次标签，包含 XPI 的 SHA-256 与 Zotero 兼容范围。Zotero 的 `update_url` 指向最新正式 Release 的此附件，预发布版不会进入此更新入口。0.2.1 及更早版本使用占位地址，需要手动安装一次 0.2.2 或更新版本。
 

@@ -1,5 +1,7 @@
 # 验收记录
 
+当前构建不再生成额外的 `source.zip`，源码由 GitHub Release 提供；下文实测记录中的源码包条目保留为历史证据。
+
 历史记录中的 Zotero AI Bridge、旧安装包名和 `/codex/mcp` 对应当时测试的版本。当前项目已更名为 Zotero Reading Bridge，使用新的插件 ID，且只提供 `/bridge/mcp`；以下历史实测结果不代表新版已完成桌面实装验收。
 
 本页逐项列出验收项，并记录每一项的执行结果。项目现在只维护三个插件：Zotero 插件（XPI）、Codex 桌面插件（ZIP）和
@@ -45,8 +47,8 @@ Claude Code 插件、Claude Science 与通用无 Hook 技能已删除，只涉�
 |---|---|---|---|---|---|---|
 | B-1 | `npm run typecheck`：全部 tsconfig（Zotero 插件、设置页面、脚本、测试、测试用种子插件、共用中继 `shared/relay/`）均无错误 | 通过 | Node.js 24.15.0，TypeScript 6.0.3 | Windows 11 开发机 | 2026-10-17 | 6 个 tsconfig 全部 ok，退出码 0（`npm run build` 的类型检查步骤同样通过）。历史记录（2026-10-15，旧布局，Node.js 24.15.0，TypeScript 6.0.3，Windows 11 开发机）：当时的五个 tsconfig `npm run typecheck` 退出码 0，`npm run build` 的类型检查步骤也全部通过。 |
 | B-2 | `npm test`：单元测试（`tests/unit`）、协议测试（`tests/protocol`）与集成测试工具自检（`tests/zotero/*.test.ts`）全部通过 | 通过 | Node.js 24.15.0，TypeScript 6.0.3 | Windows 11 开发机 | 2026-10-17 | 501 通过 / 0 失败（113 个测试组，0 跳过）。历史记录（2026-10-15，旧布局，Node.js 24.15.0，Windows 11 开发机）：522 通过 / 0 失败（116 个测试组，0 跳过；当时还包含已删除的客户端清单检查）。 |
-| B-4 | `npm run build`：类型检查 → 打包，一次生成 `zotero-reading-bridge.xpi`、`zotero-reading-bridge-codex.zip`、`zotero-reading-bridge-claude-desktop.mcpb`、`source.zip` 与 `BUILD-INFO.json`（两个安装包都含同一份 `server/zotero-relay.js`，清单中的版本、作者、许可证、关键词来自 `package.json`），随后自动运行产物校验；任何一步失败时不留下看似成功的产物，退出码非 0 | 通过 | Node.js 24.15.0，TypeScript 6.0.3 | Windows 11 开发机 | 2026-10-17 | 退出码 0：XPI 9 个条目、Codex ZIP 11 个条目、MCPB 4 个条目、`source.zip` 163 个条目、`BUILD-INFO.json`，末尾校验 34 项全部通过。失败注入：在 `packages/codex/` 放入应由构建生成的 `plugin.json`，构建报错并删除 `outputs/`。与旧布局构建逐文件比对：只有键顺序、来自 `package.json` 的元数据位置、描述文字和中继源路径注释不同。历史记录（2026-10-15，旧布局，Node.js 24.15.0，Windows 11 开发机）：`npm run build` 退出码 0，输出当时布局的 6 项产物（含 XPI 8 个条目、Codex 包 7 个条目、`source.zip`、`BUILD-INFO.json`）。失败注入（在路径含空格和中文的仓库副本中）：写出 XPI 与 Codex 包之后抛错、找不到 TypeScript、include 目标缺失，三种情况结束后 `outputs/` 都不存在。 |
-| B-5 | `npm run verify`（`npm run build` 末尾也自动运行）：XPI、Codex ZIP、MCPB 的结构与清单字段、引用资源存在、无未展开的 include 标记、两个安装包中的中继只用 Node 内置模块且不监听端口、敏感信息与本机绝对路径扫描、`source.zip` 不含 `node_modules` / `work` / `outputs` / `.git` | 通过 | Node.js 24.15.0，TypeScript 6.0.3 | Windows 11 开发机 | 2026-10-17 | 34 通过 / 0 失败，退出码 0。历史记录（2026-10-15，旧布局，Node.js 24.15.0，Windows 11 开发机）：32 通过 / 0 失败，退出码 0。敏感信息扫描另含 `Authorization: Basic`、Zotero Web API 密钥形状和通用的“key / token / secret / password = 引号字面值”规则；仓库根目录的 `.mcp.json` 与 `*.local.*` 文件不进入 `source.zip`。 |
+| B-4 | `npm run build`：类型检查 → 打包，一次生成 `zotero-reading-bridge.xpi`、`zotero-reading-bridge-codex.zip`、`zotero-reading-bridge-claude-desktop.mcpb`、`SKILL.md`、`updates.json` 与 `BUILD-INFO.json`（两个安装包都含同一份 `server/zotero-relay.js`，清单中的版本、作者、许可证、关键词来自 `package.json`），随后自动运行产物校验；任何一步失败时不留下看似成功的产物，退出码非 0 | 通过 | Node.js 24.15.0，TypeScript 6.0.3 | Windows 11 开发机 | 2026-10-17 | 退出码 0：XPI 9 个条目、Codex ZIP 11 个条目、MCPB 4 个条目、`source.zip` 163 个条目、`BUILD-INFO.json`，末尾校验 34 项全部通过。失败注入：在 `packages/codex/` 放入应由构建生成的 `plugin.json`，构建报错并删除 `outputs/`。与旧布局构建逐文件比对：只有键顺序、来自 `package.json` 的元数据位置、描述文字和中继源路径注释不同。历史记录（2026-10-15，旧布局，Node.js 24.15.0，Windows 11 开发机）：`npm run build` 退出码 0，输出当时布局的 6 项产物（含 XPI 8 个条目、Codex 包 7 个条目、`source.zip`、`BUILD-INFO.json`）。失败注入（在路径含空格和中文的仓库副本中）：写出 XPI 与 Codex 包之后抛错、找不到 TypeScript、include 目标缺失，三种情况结束后 `outputs/` 都不存在。 |
+| B-5 | `npm run verify`（`npm run build` 末尾也自动运行）：XPI、Codex ZIP、MCPB 的结构与清单字段、引用资源存在、无未展开的 include 标记、两个安装包中的中继只用 Node 内置模块且不监听端口、敏感信息与本机绝对路径扫描、更新清单版本及 XPI SHA-256 校验 | 通过 | Node.js 24.15.0，TypeScript 6.0.3 | Windows 11 开发机 | 2026-10-17 | 34 通过 / 0 失败，退出码 0。历史记录（2026-10-15，旧布局，Node.js 24.15.0，Windows 11 开发机）：32 通过 / 0 失败，退出码 0。敏感信息扫描另含 `Authorization: Basic`、Zotero Web API 密钥形状和通用的“key / token / secret / password = 引号字面值”规则；仓库根目录的 `.mcp.json` 与 `*.local.*` 文件不进入 `source.zip`。 |
 
 ## 2. 协议
 

@@ -1,7 +1,7 @@
 /**
  * Unit tests for the build/verify helpers in scripts/lib.
  * Credential and absolute-path samples are assembled from fragments so this file never matches the
- * scanners itself (it ships inside source.zip, which the verifier scans).
+ * scanners itself.
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -214,7 +214,7 @@ describe("ignore rules", () => {
     const repoRules = loadPackagingIgnoreRules(REPO_ROOT);
     for (const rel of [
       "node_modules/esbuild/package.json",
-      "outputs/source.zip",
+      "outputs/example.zip",
       "work/stage/zotero/bootstrap.js",
       ".git/HEAD",
       "tsconfig.tsbuildinfo",
@@ -222,7 +222,7 @@ describe("ignore rules", () => {
       ".claude/settings.local.json",
       "auth.json",
       ".codex/config.toml",
-      // Local client config and helpers that may hold credentials never reach source.zip.
+      // Local client config and helpers that may hold credentials never reach staged packages.
       ".mcp.json",
       "tests/zotero/fixtures/web-api.local.ts",
       "examples/settings.local.toml",

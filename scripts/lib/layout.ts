@@ -81,7 +81,6 @@ export const OUTPUT_NAMES = {
   codex: `${BRIDGE_NAME}-codex.zip`,
   claudeDesktop: `${BRIDGE_NAME}-claude-desktop.mcpb`,
   claudeSkill: "SKILL.md",
-  source: "source.zip",
   buildInfo: "BUILD-INFO.json",
   updates: "updates.json",
 } as const;
@@ -132,14 +131,10 @@ export const OUTPUTS_DIR = "outputs";
 export const PARTIAL_SUFFIX = ".partial";
 
 /**
- * Always excluded from source.zip and staged trees, on top of the repo's .gitignore
+ * Always excluded from staged trees, on top of the repo's .gitignore
  * (same subset syntax, see parseIgnorePatterns).
  */
 export const BUILTIN_IGNORE_PATTERNS = ["node_modules/", ".git", "/work/", "/outputs/", "*.tsbuildinfo"] as const;
 
 /** Fixed entry mtime (UTC) so identical inputs give byte-identical archives. */
 export const ZIP_ENTRY_DATE = new Date(Date.UTC(2026, 0, 1, 0, 0, 0));
-
-export function sourceArchivePrefix(version: string): string {
-  return `${BRIDGE_NAME}-${version}/`;
-}

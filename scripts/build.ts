@@ -4,7 +4,7 @@
  *   npm run build      (tsx scripts/build.ts)
  *
  * One run packages all three plugins: the Zotero XPI, the Codex ZIP and the Claude Desktop MCPB (the last two carry
- * the same relay bundle), plus the plain Claude Desktop SKILL.md and source.zip. package.json supplies the metadata every manifest shares.
+ * the same relay bundle), plus the plain Claude Desktop SKILL.md and updates.json. package.json supplies the metadata every manifest shares.
  *
  * Only work/stage and outputs/ are ever deleted. Any failure (including a failed package check) removes outputs/
  * entirely, so a failed build never leaves a complete-looking package behind; archives are written as *.partial and
@@ -50,7 +50,6 @@ import {
   ZOTERO_BUNDLES,
   ZOTERO_COPY_DIRS,
   ZOTERO_PLUGIN,
-  sourceArchivePrefix,
 } from "./lib/layout.js";
 import {
   type ManifestKind,
@@ -260,14 +259,6 @@ async function writeArchive(ctx: BuildContext, name: string, entries: ZipInputEn
   ctx.log(`wrote ${OUTPUTS_DIR}/${name} (${entries.length} entries)`);
 }
 
-function sourceEntries(ctx: BuildContext): ZipInputEntry[] {
-  const prefix = sourceArchivePrefix(ctx.meta.version);
-  return walkFiles(ctx.root, "", ctx.rules).map((rel) => ({
-    name: `${prefix}${rel}`,
-    data: fs.readFileSync(abs(ctx.root, rel)),
-  }));
-}
-
 function outputInventory(outputsDir: string): OutputFileInfo[] {
   return walkFiles(outputsDir, "", [])
     .filter((rel) => rel !== OUTPUT_NAMES.buildInfo)
@@ -314,7 +305,6 @@ export async function runBuild(options: BuildOptions): Promise<BuildInfo> {
     const updates = createUpdateManifest(zoteroManifest, fs.readFileSync(path.join(outputsDir, OUTPUT_NAMES.xpi)), process.env["RELEASE_TAG"]);
     fs.writeFileSync(path.join(outputsDir, OUTPUT_NAMES.updates), serializeJson(updates));
     log(`wrote ${OUTPUTS_DIR}/${OUTPUT_NAMES.claudeSkill}`);
-    await writeArchive(ctx, OUTPUT_NAMES.source, sourceEntries(ctx));
 
     const info: BuildInfo = {
       name: BRIDGE_NAME,

@@ -42,7 +42,7 @@ Zotero 自带的本机 HTTP 服务器上注册一个无状态的 MCP 端点；�
 | `shared/relay/` | 零依赖的 stdio↔HTTP 中继 `relay.ts`、`main.ts`；构建时只打包一次为 `server/zotero-relay.js`，同时放入 Codex ZIP 和 MCPB（决策 22） |
 | `packages/codex/` | Codex 桌面插件：`.codex-plugin/plugin.json`、`.mcp.json`（stdio：`node ${PLUGIN_ROOT}/server/zotero-relay.js`）、`hooks/hooks.json`、`skills/zotero/SKILL.md`、`assets/icon.svg`、`README.md`（安装说明）。构建时另行生成可移植布局的 `plugin.json` / `mcp.json` 副本并加入中继，产物 `outputs/zotero-reading-bridge-codex.zip` |
 | `packages/claude-desktop/` | Claude 桌面应用扩展：`manifest.json`（MCPB）与 `README.md`（安装说明），产物 `outputs/zotero-reading-bridge-claude-desktop.mcpb` |
-| `scripts/build.ts`、`scripts/verify-package.ts` | 类型检查、打包（一次生成三个插件、`source.zip` 与 `BUILD-INFO.json`，随后自动校验）、产物校验 |
+| `scripts/build.ts`、`scripts/verify-package.ts` | 类型检查、打包（一次生成三个插件、`SKILL.md`、`updates.json` 与 `BUILD-INFO.json`，随后自动校验）、产物校验 |
 | `tests/unit`、`tests/protocol` | Node 单元测试与协议测试（含模拟 Zotero 服务器怪癖的 HTTP 服务器和官方 MCP SDK 客户端） |
 | `tests/zotero` | 在独立的 Zotero 测试配置文件中运行的集成测试 |
 
@@ -310,6 +310,6 @@ Zotero 自带的本机 HTTP 服务器上注册一个无状态的 MCP 端点；�
 | 单元测试 | 纯函数：参数校验、分页、文本处理、访问检查、回环监听验证、响应、注册表、工具契约、检索计划与全文可检索性、结果缓存、快照与 Hook 输出（字符与 UTF-8 字节预算）、说明段落、打包与启动契约、共用中继（参数只接受 127.0.0.1、逐行转发、202 不输出、Zotero 不可达时的 JSON-RPC 错误、请求头不含 Origin） | `npm test`（`tests/unit`） |
 | 协议测试 | 模拟 Zotero 服务器怪癖的 Node HTTP 服务器 + 官方 MCP SDK 客户端（2025-11-25 与 2025-06-18）+ 原始 HTTP 用例；SDK 的 stdio 客户端启动中继子进程，经中继完成 initialize / tools/list / tools/call | `npm test`（`tests/protocol`） |
 | 集成测试工具自检 | 路径安全、测试配置文件首选项、夹具、原始 HTTP 客户端、用例目录（不启动 Zotero） | `npm test`（`tests/zotero/harness.test.ts`） |
-| 打包校验 | 三个产物（XPI、Codex ZIP、MCPB）与 `source.zip` 的结构、清单字段（版本等元数据与 `package.json` 一致）、引用资源、敏感信息与本机路径扫描；两个安装包中的中继（只用 Node 内置模块、不监听、不带 Origin），并实际运行打包后的中继（拒绝 `--host 0.0.0.0`，Zotero 不可达时返回 JSON-RPC 错误） | `npm run build` 末尾自动运行；`npm run verify` 重新校验已有产物 |
+| 打包校验 | 三个产物（XPI、Codex ZIP、MCPB）的结构、清单字段（版本等元数据与 `package.json` 一致）、引用资源、敏感信息与本机路径扫描；两个安装包中的中继（只用 Node 内置模块、不监听、不带 Origin），并实际运行打包后的中继（拒绝 `--host 0.0.0.0`，Zotero 不可达时返回 JSON-RPC 错误） | `npm run build` 末尾自动运行；`npm run verify` 重新校验已有产物 |
 | Zotero 集成测试 | 独立测试配置文件、端口 23139、合成数据，覆盖全部工具、上下文快照、生命周期、设置页与本地化、只读检查；加 `--debug-output` 时还检查插件自己的调试日志行只有摘要 | `npm run test:zotero`（可加 `--debug-output`） |
 | 手动验收 | 真实 Codex 桌面版与 Claude 桌面应用（聊天、Cowork） | 步骤见两个安装说明（`packages/codex/README.md`、`packages/claude-desktop/README.md`），结果记录于 [acceptance.md](acceptance.md) |

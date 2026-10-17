@@ -11,10 +11,10 @@ The bridge is **read-only**. It never changes, deletes or uploads anything in yo
 
 - **Zotero 11**
 - **Claude Desktop** or the **Codex** desktop app
-- These installation files:
-  - `zotero-reading-bridge.xpi` for Zotero
-  - `zotero-reading-bridge-claude-desktop.mcpb` for Claude Desktop, plus the optional but recommended `SKILL.md`
-  - `zotero-reading-bridge-codex.zip` for Codex
+- Download the installation files from the [latest release](https://github.com/volatile-static/zotero-reading-bridge/releases/latest):
+  - [Zotero plugin (.xpi)](https://github.com/volatile-static/zotero-reading-bridge/releases/latest/download/zotero-reading-bridge.xpi)
+  - [Claude Desktop extension (.mcpb)](https://github.com/volatile-static/zotero-reading-bridge/releases/latest/download/zotero-reading-bridge-claude-desktop.mcpb), plus the optional but recommended [Zotero skill (SKILL.md)](https://github.com/volatile-static/zotero-reading-bridge/releases/latest/download/SKILL.md)
+  - [Codex plugin (.zip)](https://github.com/volatile-static/zotero-reading-bridge/releases/latest/download/zotero-reading-bridge-codex.zip)
 
 ## Install
 

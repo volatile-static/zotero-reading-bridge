@@ -1,4 +1,5 @@
 /** Background PDF downloads: no Zotero items are created, and callers cannot choose a destination path. */
+import type { ToolName } from "../../../../shared/types/tool-names.js";
 import type { FulltextDownload } from "../../../../shared/types/tools.js";
 import { json, ToolError, type ToolArgs, type ToolHandler } from "./types.js";
 
@@ -49,7 +50,7 @@ export class FulltextDownloads {
   readonly handlers = {
     download_fulltext: async (args: ToolArgs) => json(this.start(args)),
     get_fulltext_download: async (args: ToolArgs) => json(this.get(String(args.downloadID))),
-  } satisfies Record<string, ToolHandler>;
+  } satisfies Partial<Record<ToolName, ToolHandler>>;
 
   start(args: ToolArgs): FulltextDownload {
     if (this.stopped) throw new ToolError("UNAVAILABLE", "The download service has stopped.");

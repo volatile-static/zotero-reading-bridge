@@ -253,10 +253,10 @@ grep -rnE "\.(saveTx|save|eraseTx|erase|setField|setNote|setCreators|addTag|remo
 
 | 编号 | 检查项 | 状态 | 客户端版本 | 执行位置 | 日期 | 证据 |
 |---|---|---|---|---|---|---|
-| C-D1 | 安装 `outputs/zotero-ai-bridge-claude-desktop.mcpb`（**设置 → 扩展**），接受清单（`manifest_version` 0.2、`server.type: node`、可选端口设置），扩展显示为运行中 | 未验证 | | | | |
+| C-D1 | 安装 `outputs/zotero-ai-bridge-claude-desktop.mcpb`（**设置 → 扩展**），接受清单（`manifest_version` 0.2、`server.type: node`、可选端口设置），扩展显示为运行中 | 通过 | Claude 桌面应用 2.42304.0（Windows） | Windows 11，开发机，真实安装（Zotero 11.0-beta.1，端口 23119） | 2026-10-16 | 通过 **设置 → 扩展** 的 Install extension 安装（未签名扩展，组织 can_install 检查通过）；**设置 → 开发者** 显示 “Zotero AI Bridge / Running / This server is managed by an extension”，命令 `node <扩展目录>/server/zotero-relay.js --port 23119`。MCP 日志（`%LOCALAPPDATA%Claudelogsmcp-server-Zotero AI Bridge.log`）：使用自带 Node.js，`server/discover` 400 → initialize 200 → 202 → tools/list 200。 |
 | C-D2 | 手动配置：`claude_desktop_config.json` 中 `zotero_bridge` 以 `node <目录>/server/zotero-relay.js --port 23119` 启动（路径含中文和空格同样可用），完全退出并重开后 **设置 → 开发者** 显示运行中 | 未验证 | | | | |
-| C-D3 | 新对话的“搜索和工具”菜单中出现 18 个工具；调用 `get_status` 成功；Zotero 调试日志中请求的 User-Agent 为 `zotero-ai-bridge-relay/<版本>`，没有 `origin:` 头 | 未验证 | | | | |
+| C-D3 | 新对话的“搜索和工具”菜单中出现 18 个工具；调用 `get_status` 成功；Zotero 调试日志中请求的 User-Agent 为 `zotero-ai-bridge-relay/<版本>`，没有 `origin:` 头 | 未验证 | Claude 桌面应用 2.42304.0（Windows） | Windows 11，开发机，真实安装（Zotero 11.0-beta.1，端口 23119） | 2026-10-16 | 部分完成：连接器菜单中出现 Zotero AI Bridge 开关，桌面应用日志 `replaceEnabledMcpTools ... toolCount=18`；`get_status` 返回 bridge 0.1.0、running、loopbackVerified，中继日志 `tools/call -> 200`。Zotero 调试日志中的 User-Agent / Origin 检查尚未做。注意：说“调用 get_status”时，Code 标签页的模型可能调用桌面应用自带的同名工具（PR 状态），测试时要写明 “Zotero AI Bridge 的 get_status”。 |
 | C-D4 | 无 Hook 工作流：导入无 Hook 技能（或项目说明）后，说“我当前在 Zotero 中选中的论文”时模型调用 `get_current_context` 并使用返回的 libraryID + key；改选后再问“那这篇呢？”会重新调用 | 未验证 | | | | |
 | C-D5 | 失败继续：打开 Claude 桌面应用时 Zotero 未运行 → 服务器显示失败、对话照常；会话中途退出 Zotero → 工具调用返回 `Cannot reach the Zotero AI Bridge` 错误，Zotero 重新启动后下一次调用成功；在 Zotero 中禁用插件 → 错误提示 **Tools > Plugins** | 未验证 | | | | |
-| C-D6 | Cowork 中能否使用同一个扩展 / 手动配置的服务器 | 未验证 | | | | |
+| C-D6 | Cowork 中能否使用同一个扩展 / 手动配置的服务器 | 通过 | Claude 桌面应用 2.42304.0（Windows） | Windows 11，开发机，真实安装（Zotero 11.0-beta.1，端口 23119） | 2026-10-16 | 扩展可用，但**第一条消息没有拿到工具**：扩展安装（20:38）后新建的 Cowork 任务（20:45）启动时 `mcpServerStatus` 的 14 个带工具服务器中没有 Zotero AI Bridge，模型回答“没有 get_status 工具”；在同一任务中继续对话后（20:47 起）中继日志出现多次 `tools/call -> 200`，用户确认可用。原因（任务启动时的工具列表未包含刚装的扩展，还是工具延迟加载）未确定。手动配置的服务器未测。 |
 | C-D7 | 中继不监听端口：Claude 桌面应用运行、扩展已启用时，`netstat -ano` 中中继进程（`node` 子进程）没有 LISTENING 行，只有到 `127.0.0.1:23119` 的连接 | 未验证 | | | | |

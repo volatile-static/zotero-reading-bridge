@@ -3,9 +3,14 @@
 本文适用于 Claude 桌面应用的聊天和 Cowork。桌面应用中的 **Code** 标签页是 Claude Code，请看
 [install-claude-code.md](install-claude-code.md)。
 
+> **注意**：实测（Claude 桌面应用 2.42304.0）中，安装的扩展也会作为 MCP 服务器交给 **Code** 标签页的会话（工具名
+> `mcp__Zotero_AI_Bridge__<工具名>`）。如果同时安装了 Claude Code 插件，Code 会话中会有两套相同的 Zotero 工具；这不影响使用，
+> 每轮自动附加快照仍由 Claude Code 插件的 Hook 完成。
+
 先完成 [install-zotero.md](install-zotero.md)，并确认 Zotero 正在运行、设置页「Zotero AI Bridge」显示“运行中”。
 
-> **状态：未在真实的 Claude 桌面应用中验证**（见 [acceptance.md](acceptance.md) 第 17 节）。中继程序本身已由自动化测试覆盖：
+> **状态：扩展安装、连接与工具调用已在 Claude 桌面应用 2.42304.0（Windows 11）中验证，聊天与 Cowork 均可用；手动配置、无 Hook 工作流
+> 和失败恢复尚未验证**（见 [acceptance.md](acceptance.md) 第 17 节）。中继程序本身已由自动化测试覆盖：
 > 官方 MCP SDK 的 stdio 客户端经中继连到模拟 Zotero 的服务器，完成 initialize、tools/list 和 tools/call。
 >
 > **多人共用的电脑上不要安装。** 客户端无法验证 `127.0.0.1:23119` 上的程序真是 Zotero：Zotero 未运行时，其他程序或其他用户
@@ -122,12 +127,15 @@ Claude 桌面应用没有 Codex / Claude Code 那样的 `UserPromptSubmit` Hook�
 
 ## 5. 验证
 
-1. 确认 Zotero 正在运行。在 Claude 桌面应用 **设置 → 开发者**（手动配置）或 **设置 → 扩展**（扩展）中，`zotero_bridge` /
-   Zotero AI Bridge 应显示为运行中；在对话输入框的“搜索和工具”菜单中能看到 18 个工具。
-2. 新建对话，发送“调用 get_status”，应返回桥接版本与 Zotero 状态。
+1. 确认 Zotero 正在运行。在 Claude 桌面应用 **设置 → 开发者** 中，`zotero_bridge`（手动配置）或 Zotero AI Bridge（扩展，注明
+   “managed by an extension”）应显示为 Running；在对话输入框 **+ → Connectors** 中能看到 Zotero AI Bridge 的开关，保持打开。
+2. 新建对话（聊天或 Cowork，**不要**用 Code 标签页），发送“调用 Zotero AI Bridge 的 get_status 工具”，应返回桥接版本与 Zotero
+   状态。要写明 “Zotero AI Bridge”：只说 “get_status” 时，模型可能调用别的同名工具。
+   - 实测中，刚装完扩展后新建的 Cowork 任务，第一条消息里模型说“没有这个工具”，在同一任务中继续发消息后就能调用了。遇到这种
+     情况，再发一次，或新建任务；仍然不行时完全退出并重开 Claude 桌面应用。
 3. 在 Zotero 中选中一篇论文，发送“读取我当前在 Zotero 中选中的论文，给出 libraryID 和 key。”模型应调用 `get_current_context`。
 4. 改选另一篇，再发送“那这篇呢？”，模型应重新调用 `get_current_context` 并切换到新论文。
-5. Cowork：在 Cowork 任务中重复第 2、3 步，记录工具是否可用（Cowork 是否能使用桌面应用配置的本地 MCP 服务器未验证）。
+5. Cowork：在 Cowork 任务中重复第 2、3 步。扩展在 Cowork 中实测可用（见第 2 步的“第一条消息”说明）；手动配置的服务器未测。
 
 结果记录在 [acceptance.md](acceptance.md) 第 17 节。
 
@@ -149,7 +157,8 @@ Claude 桌面应用没有 Codex / Claude Code 那样的 `UserPromptSubmit` Hook�
 
 ## 7. 运行方式与安全说明
 
-中继如何运行（与其他本地 MCP 服务器相同；来自对 Claude 桌面应用的了解，尚未在真实应用中验证，见验收项 C-D1、C-D2）：
+中继如何运行（扩展方式已部分实测：桌面应用日志中中继的输出记为 `[UtilityProcess stderr]`，MCP 日志显示使用自带 Node.js；权限与
+沙箱的说法来自对 Claude 桌面应用的了解，未单独验证）：
 
 - 中继**不在** Claude 桌面应用的进程里，而是它启动的一个独立 `node` 子进程，在任务管理器中可以看到。启用扩展或打开应用时启动，
   停用扩展或退出应用时结束。完整路径是：Claude 桌面应用 →（管道）→ 中继 →（HTTP，只连 `127.0.0.1`）→ Zotero，三者都在本机。
@@ -158,7 +167,8 @@ Claude 桌面应用没有 Codex / Claude Code 那样的 `UserPromptSubmit` Hook�
 - 所以关键是代码做了什么。中继只读标准输入、只写标准输出和标准错误，唯一的网络操作是 POST 到 `127.0.0.1:<端口>/bridge/mcp`；
   不读写文件，不读取环境变量中的密钥，不启动其他程序，没有第三方依赖。`npm run verify` 检查打包后的 `zotero-relay.js` 只引用
   `node:` 内置模块、不含 `createServer` / `listen`、不设置 `Origin`。源码见 `packages/claude-desktop/src/`。
-- Cowork 据称在单独的虚拟机中运行任务，它能否使用桌面应用配置的本地 MCP 服务器、以什么权限运行，未验证（验收项 C-D6）。
+- Cowork 据称在单独的虚拟机中运行任务，但扩展的中继仍由桌面应用在本机启动（同一个进程，日志中工具调用都出现在本机的中继输出里），
+  Cowork 的工具调用经桌面应用转给它。Cowork 中实测可用（验收项 C-D6）。
 
 安全边界：
 

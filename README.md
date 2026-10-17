@@ -76,7 +76,7 @@ Claude 桌面应用 ──stdio──► zotero-relay.js（子进程，不监听
 - Claude Code 2.1.118 或更新版本（`mcp_tool` Hook）；在 2.1.295 上验证过插件安装。
 - 修改 Zotero 的 HTTP 端口需要重启 Zotero，并同步修改客户端配置。
 - Codex：会话开始时 Zotero 必须已在运行（Hook 不会等待或重连服务器）；插件 Hook 必须信任，Hook 定义变化后需重新信任。
-- Claude 桌面应用：本地 MCP 服务器只能是 stdio 命令，经中继接入；未在真实的 Claude 桌面应用中验证（[docs/acceptance.md](docs/acceptance.md) 第 17 节）。
+- Claude 桌面应用：本地 MCP 服务器只能是 stdio 命令，经中继接入；扩展在 Claude 桌面应用 2.42304.0 中实测可用（聊天与 Cowork），手动配置未验证（[docs/acceptance.md](docs/acceptance.md) 第 17 节）。
 - Claude Science 0.1.63：远程连接器只接受公网 https 地址，添加本机 HTTP 端点时报 `safeFetch: https-only`，实测不兼容。
 - 阅读器中的页码、选中文字和选中批注通过 Zotero 的内部接口读取，未来的 Zotero 版本可能读不到（快照会给出警告）。
 

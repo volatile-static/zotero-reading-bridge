@@ -283,8 +283,8 @@ describe("case catalogue", () => {
     const ids = allCases.map((c) => c.id);
     assert.equal(new Set(ids).size, ids.length);
     for (const c of allCases) {
-      assert.match(c.id, /^(harness|seed|ui|protocol|tools|context|lifecycle)\.[\w.-]+$/, c.id);
-      const needsBridge = /^(protocol|tools|context|lifecycle)\./.test(c.id);
+      assert.match(c.id, /^(harness|seed|ui|protocol|tools|context|downloads|lifecycle)\.[\w.-]+$/, c.id);
+      const needsBridge = /^(protocol|tools|context|downloads|lifecycle)\./.test(c.id);
       assert.equal(c.requires.includes("bridge"), needsBridge, c.id);
     }
     const order = (prefix: string) => ids.findIndex((id) => id.startsWith(prefix));

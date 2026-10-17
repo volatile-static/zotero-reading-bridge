@@ -1,8 +1,44 @@
 ## Research workflow with Zotero
 
 The Zotero Reading Bridge tools read the user's local Zotero library through the running Zotero desktop app. They are
-read-only: they cannot add, edit, tag, move or delete anything, and they never download files. If the user asks for
-a change, explain that the bridge is read-only and describe what they can do in Zotero themselves.
+read-only with respect to the library: they cannot add, edit, tag, move or delete library items. A separate
+`download_fulltext` tool can fetch research PDFs into temporary files without adding them to Zotero.
+
+### Retrieve missing full text during research
+
+When preparing a literature review or researching a paper, first use available search engines and existing
+library attachments. If those cannot provide the original full text, use `download_fulltext` with the article
+URL or a `https://doi.org/...` URL (`kind: "page"`), or a known PDF URL (`kind: "pdf"`). The paper need not be in
+the library. Zotero uses the user's computer and its campus network or institutional VPN access; it does not
+grant subscriptions, bypass paywalls, or import Chrome/Edge login sessions.
+
+Before starting, tell the user: **Some publishers may make Zotero open a CAPTCHA window. Please complete it
+in Zotero so the PDF download can continue.** Leave `allowCaptcha: true` for this workflow. The user completes
+the CAPTCHA; do not attempt to solve it for them. Do not repeatedly retry without a change in access or user
+action. If Zotero cannot retrieve the full text, continue with the browser fallback below.
+
+The start call returns a `downloadID`. Query `get_fulltext_download` using that ID, waiting at least
+`pollAfterMs` between calls (use longer intervals during human verification); continue other research while
+it runs. Only one download runs at a time. A `running` status does not prove a CAPTCHA is showing. Do not call
+`download_fulltext` again just to poll. Stop polling on `complete`, `not_found` or `failed`.
+
+On `complete`, read the returned `path` using your own PDF/file-reading tools. This path is on Zotero's
+computer and may be inaccessible to a cloud session; if so, ask for an accessible copy. The PDF is not added
+to the library and `get_fulltext` cannot read it. Files expire one hour after completion, on eviction from
+the 10-job cache, or on plugin shutdown; copy needed files into the research workspace promptly. Cleanup is
+best effort if Zotero crashes. Verify the PDF's title/authors/DOI and distinguish accepted manuscripts from
+published versions before using it. Cite its DOI or publisher/source URL, not an invented Zotero item key.
+
+If the download ends in `not_found` or `failed`, or the download tools are unavailable after discovery,
+use the host's built-in browser, when available, to open the article/DOI or publisher URL and read the full
+text. Prefer Zotero's automatic download before this browser fallback. Read the publisher's full-text HTML
+directly, or download the PDF through the browser and read it with available PDF/file tools. This does not
+require Zotero Connector or adding anything to the library. The built-in browser has its own login state;
+ask the user to complete any required institutional sign-in or CAPTCHA there, then continue after they finish.
+Use the user's authorized access without bypassing access controls. Verify the paper's identity and version,
+and cite the DOI or publisher URL. An abstract or preview is not full text. If the browser is unavailable or
+still cannot access the full text, explain the limitation and ask for an accessible copy. Base conclusions
+only on content actually read and explicitly report incomplete coverage.
 
 ### Resolve the current paper or selection
 

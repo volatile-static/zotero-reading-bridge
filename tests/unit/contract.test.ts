@@ -43,10 +43,10 @@ describe("shared/contracts/tools.json", () => {
         assert.equal(tool.annotations.title, tool.title);
       });
 
-      it("is annotated read-only and non-destructive", () => {
-        assert.equal(tool.annotations.readOnlyHint, true);
+      it("declares network and temporary-file effects accurately", () => {
+        assert.equal(tool.annotations.readOnlyHint, tool.name !== "download_fulltext");
         assert.equal(tool.annotations.destructiveHint, false);
-        assert.equal(tool.annotations.openWorldHint, false);
+        assert.equal(tool.annotations.openWorldHint, tool.name === "download_fulltext");
         assert.equal(typeof tool.annotations.idempotentHint, "boolean");
       });
 

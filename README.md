@@ -5,7 +5,14 @@
 Let your AI assistant read your Zotero library. Ask Claude or Codex about the paper you have open, your highlights and
 notes, or anything in your collections. It works with the papers already on your computer.
 
-The bridge is **read-only**. It never changes, deletes or uploads anything in your library.
+The bridge keeps your **library read-only**. It never adds, changes or deletes library items. For literature
+research, it can also download PDFs into temporary files using Zotero's access through your campus network
+or institutional VPN, without adding attachments to your library.
+
+If other search engines cannot retrieve a paper's full text, ask the assistant to try Zotero. Some publishers
+may open a CAPTCHA window in Zotero; complete it there to let the download continue. Access depends on your
+institution's subscriptions and network setup. Downloaded PDFs stay on Zotero's computer for up to one hour
+(or until cache eviction/plugin shutdown); the assistant needs local file-reading access to read them.
 
 ## What you need
 
@@ -51,6 +58,7 @@ Start a new chat and ask, for example:
 - "What did I highlight in this PDF?"
 - "Find papers in my Zotero library about protein folding."
 - "Compare the methods of the papers I selected."
+- "Get the full text of this paper using my university access and summarize it: [DOI or URL]."
 
 ## If something doesn't work
 
@@ -62,8 +70,11 @@ To update, drag in the new files the same way. To uninstall, remove the plugin i
 
 ## Privacy
 
-Everything stays on your computer. The bridge only answers programs running on the same computer. However, any
-program on this computer can read your library while Zotero is open, so only install it on a computer you trust.
+Library access is local. Full-text downloads contact publishers using URLs you or the assistant supply and
+may use Zotero's cookies and your institutional network access. The bridge only answers programs running on
+the same computer. However, any
+program on this computer can read your library and request downloads while Zotero is open, so only install it
+on a computer you trust. Downloaded files are not automatically added to or synced through the library.
 
 ## For developers
 

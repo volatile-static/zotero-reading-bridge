@@ -39,6 +39,7 @@ import { createStatusHandlers } from "./tools/status.js";
 import type { ToolHandler, ToolRegistry } from "./tools/types.js";
 import { ensureItemsLoaded, listNonFeedLibraries } from "./zotero/library.js";
 import { startResultCaching } from "./zotero/result-caches.js";
+import { createFulltextDownloads } from "./zotero/fulltext-download.js";
 
 const LOG_PREFIX = "[Zotero Reading Bridge]";
 /** Let Zotero finish opening its window before warming item caches, then load libraries one at a time. */
@@ -51,6 +52,7 @@ interface ServingConfig {
 }
 
 class BridgeRuntime {
+  private readonly downloads = createFulltextDownloads();
   private stopped = false;
   private serving: ServingConfig | null = null;
   private error: string | null = null;
@@ -96,6 +98,7 @@ class BridgeRuntime {
   /** Same cleanup for every shutdown reason; each step runs even if an earlier one throws. */
   stop(): void {
     this.stopped = true;
+    this.cleanup(() => this.downloads.stop());
     this.cleanup(() => this.unregisterEndpoints());
     this.cleanup(() => {
       const stopResultCaching = this.stopResultCaching;
@@ -142,6 +145,7 @@ class BridgeRuntime {
       ...itemHandlers,
       ...contentHandlers,
       ...attachmentHandlers,
+      ...this.downloads.handlers,
       ...schemaHandlers,
     };
   }

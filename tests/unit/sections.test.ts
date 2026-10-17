@@ -7,7 +7,7 @@ import { TOOL_NAMES } from "../../shared/types/tool-names.js";
 const instructionsDir = new URL("../../shared/instructions/", import.meta.url);
 const read = (name: string): string => readFileSync(new URL(name, instructionsDir), "utf8");
 
-const TOOL_MENTION_RE = /\b(?:get|list|search|run|capture)_[a-z_]+\b/g;
+const TOOL_MENTION_RE = /\b(?:get|list|search|run|capture|download)_[a-z_]+\b/g;
 
 describe("extractSection", () => {
   it("returns the trimmed text between the markers", () => {

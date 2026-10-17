@@ -59,7 +59,7 @@ function missingFileNote(attachment: ZItem, linkMode: AttachmentLinkMode, rawPat
   if (STORED_MODES.has(linkMode)) {
     const syncState = safe(() => Number(attachment.attachmentSyncState), -1);
     if (PENDING_DOWNLOAD_STATES.has(syncState)) {
-      return "The file has not been downloaded to this computer yet (it was synced from another device). Opening the attachment in Zotero downloads it; the bridge never downloads files.";
+      return "The file has not been downloaded to this computer yet (it was synced from another device). Open the attachment in Zotero to sync it; this path lookup does not download it.";
     }
     return "The file is missing from Zotero's storage directory on this computer (not synced here, or deleted).";
   }

@@ -1,6 +1,6 @@
 # 第三方声明（Third-Party Notices）
 
-Zotero Reading Bridge 本身以 GNU GPL v3 或更新版本（GPL-3.0-or-later）许可证发布（见 `LICENSE`）。
+Zotero Reading Bridge 本身以 GNU GPL v3 或更新版本（GPL-3.0-or-later）许可证发布（见 [LICENSE](../LICENSE)）。
 
 ## 发布产物中不包含第三方代码
 
@@ -8,7 +8,7 @@ Zotero Reading Bridge 本身以 GNU GPL v3 或更新版本（GPL-3.0-or-later）
 只包含本项目自己的代码、配置和文档。下表中的依赖全部是**开发依赖**，只在构建、类型检查和测试时使用，不会被打包进任何产物：
 esbuild 只打包本仓库内的 TypeScript 源文件，Zotero 插件运行时没有任何 npm 运行时依赖。
 
-`outputs/source.zip` 是源码归档，不含 `node_modules`。
+源码通过 GitHub Release 的 Source code 入口提供，不另行打包 `source.zip`。
 
 ## 开发依赖
 

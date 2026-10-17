@@ -281,13 +281,13 @@ export const protocolCases: TestCase[] = [
   },
   {
     id: "protocol.tools-list",
-    title: "tools/list returns the 18 read-only tools of the contract",
+    title: "tools/list returns all tools with accurate effect annotations",
     requires: ["bridge"],
     async run(ctx) {
       const tools = await toolsList(ctx, ENDPOINT_PATH);
       assert.deepEqual(tools.map((t) => t.name), [...TOOL_NAMES]);
       for (const tool of tools) {
-        assert.equal(tool.annotations?.readOnlyHint, true, `${tool.name} readOnlyHint`);
+        assert.equal(tool.annotations?.readOnlyHint, tool.name !== "download_fulltext", `${tool.name} readOnlyHint`);
         assert.equal(tool.annotations?.destructiveHint, false, `${tool.name} destructiveHint`);
         assert.equal(tool.inputSchema?.type, "object", `${tool.name} inputSchema`);
         assert.equal(tool.outputSchema, undefined, `${tool.name} must not declare outputSchema`);

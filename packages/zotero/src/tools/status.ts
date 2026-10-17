@@ -16,8 +16,10 @@ export interface StatusResult {
     title: string;
     version: string;
     status: BridgeStatusKind;
-    /** The bridge never modifies Zotero data. */
-    readOnly: true;
+    /** Network downloads write temporary files, but never modify the library. */
+    readOnly: false;
+    libraryReadOnly: true;
+    temporaryDownloads: true;
     endpoints: Array<{ path: string; url: string | null }>;
     /** Path this request arrived on (/bridge/mcp). */
     requestPath: string;
@@ -53,7 +55,9 @@ function buildStatus(state: BridgeState, ctx: ToolCallContext): StatusResult {
       title: BRIDGE_TITLE,
       version: state.version,
       status: state.status,
-      readOnly: true,
+      readOnly: false,
+      libraryReadOnly: true,
+      temporaryDownloads: true,
       endpoints: state.registeredPaths.map((path) => ({
         path,
         url: state.port === null ? null : endpointUrl(state.port, path),

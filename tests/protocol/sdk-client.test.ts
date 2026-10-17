@@ -119,7 +119,7 @@ for (const version of ["2025-11-25", "2025-06-18"] as const) {
           [...TOOL_NAMES],
         );
         for (const tool of tools) {
-          assert.equal(tool.annotations?.readOnlyHint, true);
+          assert.equal(tool.annotations?.readOnlyHint, tool.name !== "download_fulltext");
           assert.equal(tool.outputSchema, undefined);
         }
       });

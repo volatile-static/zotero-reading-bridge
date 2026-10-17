@@ -1,7 +1,20 @@
 /**
- * Result payload shapes returned by the read-only tools (serialized as JSON text content).
+ * Result payload shapes returned by the tools (serialized as JSON text content).
  * Host-agnostic: no Zotero or Node types here.
  */
+
+/** Background download status; paths refer to temporary files on Zotero's computer. */
+export interface FulltextDownload {
+  downloadID: string;
+  status: "running" | "complete" | "not_found" | "failed";
+  requestedURL: string;
+  sourceURL: string | null;
+  path: string | null;
+  bytes: number | null;
+  expiresAt: string | null;
+  pollAfterMs: number | null;
+  note: string;
+}
 
 /** Stable error codes carried in tool-execution errors (CallToolResult.isError = true). */
 export type ToolErrorCode =

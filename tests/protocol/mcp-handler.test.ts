@@ -359,7 +359,7 @@ describe("JSON-RPC methods", () => {
     assert.equal("nextCursor" in body.result, false);
     for (const tool of body.result.tools) {
       assert.equal(tool.inputSchema.type, "object");
-      assert.equal(tool.annotations.readOnlyHint, true);
+      assert.equal(tool.annotations.readOnlyHint, tool.name !== "download_fulltext");
       assert.equal("outputSchema" in tool, false);
     }
   });

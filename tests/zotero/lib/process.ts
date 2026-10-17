@@ -40,6 +40,10 @@ export function launchZotero(exe: string, layout: RunLayout, options: { debugOut
   const logFile = path.join(layout.logsDir, "zotero-stdout.log");
   const log = fs.openSync(logFile, "a");
   const env: NodeJS.ProcessEnv = { ...process.env, MOZ_NO_REMOTE: "1", MOZ_CRASHREPORTER_DISABLE: "1" };
+  // PDF downloads must use the disposable test tree, never the user's real temp directory.
+  const tempDir = assertTestPath(path.join(profileDir, "temp"), "temporary download directory");
+  fs.mkdirSync(tempDir, { recursive: true });
+  env.TMP = env.TEMP = env.TMPDIR = tempDir;
   // Never let an inherited profile override reach the child.
   for (const name of ["XRE_PROFILE_PATH", "XRE_PROFILE_LOCAL_PATH", "XRE_PROFILE_NAME", "MOZ_RESET_PROFILE_RESTART"]) {
     delete env[name];

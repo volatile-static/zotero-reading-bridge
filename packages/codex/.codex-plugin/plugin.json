@@ -7,7 +7,7 @@
   "interface": {
     "displayName": "Zotero Reading Bridge",
     "shortDescription": "Read your local Zotero library",
-    "longDescription": "Search items, collections, notes, annotations and attachment paths in the running Zotero desktop app (read-only, local only), and attach the current Zotero selection or open PDF to each prompt.",
+    "longDescription": "Read your Zotero library and attach the current selection to each prompt. When other sources cannot retrieve full text, download research PDFs through Zotero using your campus network or VPN access. Downloads are temporary files; the library stays unchanged. Some publishers may open a CAPTCHA window in Zotero.",
     "developerName": "volatile-static",
     "category": "Productivity",
     "capabilities": [

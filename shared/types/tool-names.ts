@@ -22,6 +22,8 @@ export const TOOL_NAMES = [
   "list_attachments",
   "get_attachment_path",
   "get_fulltext",
+  "download_fulltext",
+  "get_fulltext_download",
   "get_library_paths",
   "get_schema",
 ] as const;

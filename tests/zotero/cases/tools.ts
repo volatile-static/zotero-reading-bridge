@@ -75,6 +75,7 @@ export const toolCases: TestCase[] = [
       // No "enabled" field: the bridge has no switch of its own (disabling the plugin removes the endpoint).
       assert.deepEqual(Object.keys(status.bridge).sort(), [
         "endpoints",
+        "libraryReadOnly",
         "loopbackVerified",
         "name",
         "protocolVersion",
@@ -82,10 +83,13 @@ export const toolCases: TestCase[] = [
         "readOnly",
         "requestPath",
         "status",
+        "temporaryDownloads",
         "title",
         "version",
       ]);
-      assert.equal(status.bridge.readOnly, true);
+      assert.equal(status.bridge.readOnly, false);
+      assert.equal(status.bridge.libraryReadOnly, true);
+      assert.equal(status.bridge.temporaryDownloads, true);
       assert.equal(status.bridge.loopbackVerified, true);
       assert.deepEqual(status.bridge.protocolVersions, [...SUPPORTED_PROTOCOL_VERSIONS]);
       assert.deepEqual(

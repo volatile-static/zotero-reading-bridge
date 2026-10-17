@@ -43,6 +43,11 @@ export function removeMissingFixtureFiles(files: SeedRequest["files"], manifest:
 /** Windows paths compare case-insensitively and with either separator. */
 export function samePath(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a || !b) return false;
-  const norm = (p: string) => path.resolve(p).replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+  const norm = (p: string) => {
+    const resolved = path.resolve(p);
+    return process.platform === "win32"
+      ? resolved.replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase()
+      : resolved;
+  };
   return norm(a) === norm(b);
 }

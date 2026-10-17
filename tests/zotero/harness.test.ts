@@ -68,8 +68,10 @@ describe("path safety", () => {
     assert.throws(() => assertTestPath(path.join(TEST_ROOT, "..", "..", "outputs"), "escape"), /Refusing/);
   });
 
-  test("samePath ignores separators, case and trailing slashes", () => {
+  test("samePath follows platform case and separator rules and ignores trailing slashes", () => {
     assert.equal(samePath("C:\\A\\b\\", "c:/a/B"), process.platform === "win32");
+    assert.equal(samePath("/tmp/A", "/tmp/a"), process.platform === "win32");
+    assert.equal(samePath("/tmp/a/", "/tmp/a"), true);
     assert.equal(samePath(null, "x"), false);
   });
 });

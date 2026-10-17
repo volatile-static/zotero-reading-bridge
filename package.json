@@ -1,6 +1,6 @@
 {
   "name": "zotero-reading-bridge",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Zotero Reading Bridge: read-only Zotero MCP endpoint plus Codex and Claude Desktop plugins",
   "license": "GPL-3.0-or-later",

@@ -40,7 +40,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 
 | 路径 | 内容 |
 |---|---|
-| `shared/contracts/tools.json` | 18 个工具的定义（名称、说明、输入 JSON Schema、只读注解），`tools/list` 与参数校验的唯一来源 |
+| `shared/contracts/tools.json` | 19 个工具的定义（名称、说明、输入 JSON Schema、只读注解），`tools/list` 与参数校验的唯一来源 |
 | `shared/types/` | 协议常量、工具结果类型、上下文快照类型、Hook 约定、端点与端口常量 |
 | `shared/instructions/` | 给模型的英文说明：`context-policy.md`（`server-instructions` 与 `hook-rules` 两个段落）、`research-workflow.md`；`sections.ts` 按 `<!-- BEGIN:名称 -->` / `<!-- END:名称 -->` 提取段落 |
 | `packages/zotero/` | Zotero 插件：`bootstrap.ts`（生命周期）、`src/main.ts`（启动 / 关闭）、`src/server/`（HTTP 适配、MCP 协议、访问检查、响应、参数校验）、`src/tools/`（工具实现）、`src/context/`（界面状态快照与 Hook 输出）、`src/settings/` 与 `content/`（设置页面）、`locale/`（界面文字） |
@@ -121,8 +121,10 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 **只读**
 
 - 所有工具只调用读取类 Zotero API；没有任何写入（不保存、不删除、不改字段、不执行 UPDATE / INSERT / DELETE、不写文件、不触发同步、不下载附件）。
-- `get_attachment_path` 只返回路径和是否存在；读取文件内容由客户端自己的文件工具完成，桥接从不返回文件内容。
-- 18 个工具的注解都是 `readOnlyHint: true`、`destructiveHint: false`（单元测试检查）。
+- `get_attachment_path` 只返回路径和是否存在；读取附件文件本身（PDF、EPUB、网页快照）由客户端自己的文件工具完成，桥接从不返回附件文件。
+  桥接只返回 Zotero 自己生成的派生数据：`get_fulltext` 读全文索引缓存（`.zotero-ft-cache` / `.zotero-ft-unprocessed`），
+  `get_annotations` / `get_current_context` 读图片批注的缓存图（`cache/library/<KEY>.png`）；都只读文件，不触发索引、提取或渲染（决策 23、24）。
+- 19 个工具的注解都是 `readOnlyHint: true`、`destructiveHint: false`（单元测试检查）。
 
 **只在本机可访问**
 
@@ -212,6 +214,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 16. **不声明 `outputSchema`**：MCP 规定声明了 `outputSchema` 的工具在每个成功结果中都必须带符合该 Schema 的 `structuredContent`，
     客户端（例如官方 TypeScript SDK）会校验，不符合就把整个调用当作失败；而两个客户端的 Hook 路径只读取 text 内容，忽略
     `structuredContent`。只返回 JSON 文本可以让模型、Hook 和所有客户端看到同一份内容，也避免列表类结果必须包一层对象的限制。
+    （决策 23 修订：第一个内容始终是完整的 JSON 文本，其后可以追加正文 text 与 image 内容；Hook 输出仍只有一个 text。）
 17. **Origin 403 是必需的一层（修正 DESIGN 决策 11）**：DESIGN 原来认为 Zotero 会断开所有带 `Origin` 或浏览器 User-Agent 的请求，
     插件的检查只是纵深防御。Zotero 11 源码表明，带 `X-Zotero-Connector-API-Version` 或 `Zotero-Allowed-Request` 头的请求跳过这项检查，
     且 Zotero 为 `https://www.zotero.org` 回应 CORS 预检，所以该站点的脚本可以把 JSON POST 送到插件。插件的 Origin 规则因此是这类
@@ -245,6 +248,23 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
     - 中继不做协议处理（不解析参数、不缓存、不发 `Mcp-Session-Id`），只在 `initialize` 成功后把协商的版本放进 `MCP-Protocol-Version`
       头；日志只写方法名和 HTTP 状态。冒充风险（第 5 节）不变：Zotero 未运行时占用端口的程序同样能回答中继。
     `npm run verify` 检查打包后的中继只引用 `node:` 内置模块、不含 `createServer` / `listen`、不设置 `Origin`，并实际运行它。
+23. **图片批注默认附带图像，工具结果可以有多个内容（修订决策 16）**：用户选中图片批注，就是要让模型看图。`get_annotations`
+    （`includeImages` 默认 true）与 `get_current_context`（选中的图片批注）读取 Zotero 渲染时写下的
+    `<数据目录>/cache/library/<KEY>.png`（`Zotero.Annotations.getCacheImagePath`），以 MCP image 内容追加在 JSON 之后。
+    第一个内容始终是完整的 JSON 文本：每条图片批注的 `image` 字段（`get_current_context` 为第二个 text 中的
+    `selectedAnnotationImages`）说明缓存路径、是否存在、是否附带及原因，不支持图像的客户端也不丢信息。取图失败（未渲染、读取出错、
+    单张超过 2 MB 或本次合计超过 6 MB）只退回元数据，不报错；不调用渲染接口，缺图保持缺图（渲染会写磁盘）。插件沙箱没有 `btoa`，
+    base64 由 `util/base64.ts` 自行编码。Hook 的 additionalContext 只能是文本，快照不变，由 hook-rules 要求模型对选中的图片批注调用 `get_annotations`。
+24. **全文只读 Zotero 的缓存，默认整篇返回**：`get_fulltext` 读取 `storage/<KEY>/.zotero-ft-cache`（Zotero 索引 PDF、EPUB、
+    网页时写下的纯文本，按阅读顺序；双栏 PDF 比 `pdftotext` 默认输出可读得多），没有时读同步来、尚未处理的 `.zotero-ft-unprocessed`
+    （JSON 的 `text`）。不使用 `item.attachmentText`（缓存不完整时它会调用 PDF worker 现场提取），不索引、不提取、不读附件文件。
+    缓存没有分页符，无法按页读取；PDF 默认只索引前若干页，所以结果带 `indexState`（`partial` 时 `note` 说明并建议读文件）与
+    `indexedPages` / `totalPages`。默认按估算 token（ASCII 4 字符 / token，其他字符 1 字符 / token）取不超过 20 000 token，低于
+    Claude Code 默认的 MCP 输出上限 25 000，常见论文一次返回整篇；更长时 `complete: false`，用 `nextOffset` 续读，切分点优先落在
+    换行处、不拆代理对。正文作为第二个 text 内容原样返回，不放进 JSON 字符串，避免换行与引号转义。
+25. **根据阅读器上下文回答前必须先读全文**：焦点是阅读器、问题涉及该文献时，模型先对阅读器附件调用 `get_fulltext`（每篇一次），
+    依据正文作答，不凭记忆、标题或摘要。规则写在 hook-rules（每轮注入；上限因此从 900 提高到 1200 字符）、server-instructions 与
+    `research-workflow.md`（三个技能都包含）。
 
 ## 7. 与原计划的差异
 
@@ -263,7 +283,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 | 带 Origin 的请求 | 缺失 Origin 可接受，存在 Origin 则拒绝（含 null）；不开放 CORS | 大多数带 `Origin` 或浏览器 User-Agent 的请求先被 Zotero 自身直接断开（连接关闭，没有 403）；带 `X-Zotero-Connector-API-Version` / `Zotero-Allowed-Request` 头的请求不会被断开，到达插件后一律 403；插件从不发送 CORS 头，Zotero 只对 `https://www.zotero.org` 附加它自己的 CORS 头 | 若要对所有浏览器请求都自己返回 403，就必须打开 `allowRequestsFromUnsafeWebContent`，让浏览器请求进入插件代码；保持 Zotero 的“直接断开”更安全。插件的 Origin 规则是绕过 Zotero 检查的那类请求唯一的屏障（决策 17）。 |
 | `server/discover` 探测 | 未涉及（2026-07-28 晚于原计划） | 无论是否带 2026-07-28 版本头，一律 HTTP 400 + `-32601` 并回显 id；其他带不支持版本头的请求 400 + `-32600` | 两个客户端的探测分类器在收到回显 id 的“方法不存在”（`-32601`）时才判定为旧协议服务器并回退到 `initialize`；未回显 id 的错误、其他错误码、非 JSON 的 400、401 / 403 / 5xx 都会被判定为硬失败（决策 6）。 |
 | 错误状态码 | 未规定（只要求协议错误与工具执行错误按 MCP 格式返回）；常见实现用 500 / 503 表示内部错误或“未就绪” | **从不返回 5xx**：内部异常变成 HTTP 200 + JSON-RPC `-32603` 或 `isError` 工具结果；桥接关闭时注销端点，由 Zotero 返回 404 | Zotero 自身在 `init` 抛异常时写出格式错误的 500；Codex 把 5xx 当作可重试的传输失败，Claude Code 的探测把 ≥ 500 当作硬失败（决策 8）。 |
-| 工具结果格式 | 未规定（可用 `outputSchema` + `structuredContent`） | 只返回一个 text 内容（JSON 文本），不声明 `outputSchema` | 声明后每个结果都必须带通过校验的 `structuredContent`，否则客户端判定调用失败；Hook 路径只读取文本（决策 16）。 |
+| 工具结果格式 | 未规定（可用 `outputSchema` + `structuredContent`） | 第一个内容始终是 JSON 文本；`get_fulltext` 之后追加正文 text，图片批注追加 image；不声明 `outputSchema` | 声明后每个结果都必须带通过校验的 `structuredContent`，否则客户端判定调用失败；Hook 路径只读取文本（决策 16、23）。 |
 | Hook 输出 | 快照用 `hookSpecificOutput.additionalContext` 返回，MCP 文本内容承载 Hook JSON；长选区注明截断 | 文本**恰好**是 `{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"…"}}`，没有其他键；“未选中 / Zotero 不可用”也不返回 `isError`；长度按客户端限制：8000 字符，Codex 与未知客户端另限 9600 个 UTF-8 字节 | Codex 对多余键直接判定 Hook 失败；`isError` 在两个客户端中都是“失败、不注入任何内容”，模型就看不到“当前什么都没选中”这一事实（决策 5）；Codex 按 UTF-8 字节估算 token，超过约 10000 字节就把上下文转存为文件、只给首尾预览（决策 18）。 |
 | 采集内容 | 选中条目、当前分类、阅读器附件、选中文字、选中批注与时间戳 | 另外采集打开的笔记（笔记标签页或独立笔记窗口）与焦点（`focus`），主窗口关闭时读取独立阅读器 / 笔记窗口 | Zotero 11 默认在标签页中打开笔记；笔记或阅读器标签页在前台时，条目列表的选择属于隐藏的文献库标签页，不能当作“这篇”（决策 20）。 |
 | 全文检索 | 全文检索仅用 Zotero 已有索引 | 一致；索引无法回答的词（3 个字母以下、单个汉字、中英文混合）在 `fulltext` 模式及 `everything` 模式的引号词中直接报 `INVALID_ARGUMENT` | Zotero 对这类词会退回到逐个读取所有附件的全文缓存，这已不是“用已有索引”，且在大型文献库上要几分钟（决策 21）。 |

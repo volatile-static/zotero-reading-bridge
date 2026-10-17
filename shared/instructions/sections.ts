@@ -7,7 +7,7 @@
 /** Character budgets for the sections the Zotero plugin embeds (checked by tests/unit/sections.test.ts). */
 export const SECTION_CHAR_LIMITS = {
   /** Injected with every per-prompt snapshot, so it must stay small. */
-  "hook-rules": 900,
+  "hook-rules": 1200,
   /** MCP initialize `instructions`; clients cap or truncate long instructions (Claude Code at 4096 chars). */
   "server-instructions": 3500,
 } as const;

@@ -21,20 +21,38 @@ a change, explain that the bridge is read-only and describe what they can do in 
 
 - `get_items` returns full metadata (fields, creators, tags, collections, children summary) for up to 50 keys.
 - `get_notes` returns notes as HTML and plain text; `get_annotations` returns highlights, comments and their page
-  labels with a `zotero://open-pdf` link; `get_item_children` lists notes, attachments or annotations of an item.
+  labels with a `zotero://open-pdf` link, and attaches the cached image of each image annotation (its `image` field
+  says whether it was attached, and why not); `get_item_children` lists notes, attachments or annotations of an item.
 - Always pass the `libraryID` and `key` you received. Keys are 8 characters (uppercase letters and digits); never
   invent them from titles.
 
 ### Read the full text of a PDF or other attachment
 
-1. Call `get_attachment_path` with the item key (the best attachment, PDF first, is chosen for a regular item) or
-   with an attachment key from `list_attachments`.
-2. If `exists` is true, open `path` with your own file-reading tools (for example a PDF reader or text extraction
-   tool available in this client). The bridge never returns file contents.
-3. If `exists` is false or `path` is null, read `note`: the file may not be synced to this computer, may have been
+1. Call `get_fulltext` with the item key (the best attachment, PDF first, is chosen for a regular item) or with an
+   attachment key. It returns the text Zotero already extracted, in reading order: JSON metadata first, then the
+   text. A typical paper comes back whole; if `complete` is false, call again with `offset` set to `nextOffset`.
+2. Check `indexState` and `note`. `"partial"` means Zotero indexed only the first pages (`indexedPages` of
+   `totalPages`): say so, and read the file for the rest. Without text (`"unindexed"`, a scanned PDF, a linked URL),
+   read the file instead.
+3. To read the file, call `get_attachment_path` and, if `exists` is true, open `path` with your own file-reading
+   tools. The bridge never returns attachment files themselves.
+4. If `exists` is false or `path` is null, read `note`: the file may not be synced to this computer, may have been
    moved, or may be a linked URL. Tell the user; do not guess the content.
-4. Zotero's full-text index (`search_items` with `mode: "fulltext"` or `"everything"`) only covers files Zotero
-   has already indexed; use it to find candidates, not as a substitute for reading the file.
+5. Zotero's full-text index (`search_items` with `mode: "fulltext"` or `"everything"`) only covers files Zotero
+   has already indexed; use it to find candidates, not as a substitute for reading the document.
+
+### Answer questions about the document open in the reader
+
+When the Zotero focus (snapshot or `get_current_context`) is `"reader"` and the question concerns that document
+("this paper", "this formula", "this figure", its methods, results or arguments):
+
+1. Call `get_fulltext` on the reader attachment before answering, once per document in the conversation (again only
+   if the user opens another document). Answer from that text, not from memory, the title or the abstract, and
+   quote it where it matters.
+2. If `indexState` is `"partial"` or there is no text, tell the user and read the file (see above) before answering.
+3. Use the selected text and the page number to find the passage the user means within the full text.
+4. A selected image annotation is an image: `get_current_context` attaches it; with a hook snapshot, call
+   `get_annotations` on its key. Look at it before answering. If `image.included` is false, report its `note`.
 
 ### Answer and cite
 

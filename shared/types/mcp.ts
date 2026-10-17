@@ -102,9 +102,19 @@ export interface TextContent {
   text: string;
 }
 
-/** MCP CallToolResult as sent on the wire (text content only; no outputSchema/structuredContent). */
+export interface ImageContent {
+  type: "image";
+  /** Base64-encoded image bytes. */
+  data: string;
+  mimeType: string;
+}
+
+/**
+ * MCP CallToolResult as sent on the wire (no outputSchema/structuredContent). The first content item is always text:
+ * the JSON result, the hook JSON or the error payload; text and image items may follow it.
+ */
 export interface CallToolResult {
-  content: TextContent[];
+  content: [TextContent, ...(TextContent | ImageContent)[]];
   isError?: boolean;
   [key: string]: unknown;
 }

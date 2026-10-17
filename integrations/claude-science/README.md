@@ -55,7 +55,7 @@ G-4、W-5、N-3 行（逐步操作也可参考 `tests/clients/generic-no-hook/RE
 - 日志中与 `127.0.0.1:23119` 相关的行；
 - 第 6 步的三项结果：请求是否带 `Origin` 或 `Mozilla/` User-Agent（是否被 Zotero 断开或被插件 403）、请求是否到达 Zotero、
   是否接受 JSON-only 响应（只记录请求头与状态，不要粘贴文献库内容）；
-- 工具列表是否出现 18 个工具，`get_status` 与 `get_current_context` 的返回摘要；
+- 工具列表是否出现 19 个工具，`get_status` 与 `get_current_context` 的返回摘要；
 - PDF 阅读：`get_attachment_path` 返回的路径是否能被 Claude Science 读取（沙箱可能无法读取本地文件）。
 
 在真实复测通过之前，状态保持“不兼容”。

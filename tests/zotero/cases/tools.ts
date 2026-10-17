@@ -1,5 +1,5 @@
 /**
- * Happy and error paths of the 18 tools against the seeded fixture library (DESIGN 2.C behaviour,
+ * Happy and error paths of the 19 tools against the seeded fixture library (DESIGN 2.C behaviour,
  * shared/types/tools.ts shapes). Expected values come from fixtures/data.ts and the seed manifest.
  */
 import assert from "node:assert/strict";
@@ -14,15 +14,18 @@ import {
   FIXTURE_TAGGED_LIVE_ITEMS,
   GROUP,
   GROUP_TAG,
+  ITEMS,
   LONG_NOTE_REPEAT,
   LONG_NOTE_UNIT,
   PDF_FIRST_PAGE_LABEL,
+  PDF_PAGES,
   bulkTitle,
 } from "../fixtures/data.js";
 import { samePath } from "../lib/fixture-files.js";
 import { isInside } from "../lib/paths.js";
 import type { McpClient } from "../lib/mcp.js";
 import { assertJsonResponse } from "./protocol.js";
+import { normalizeSpaces } from "./ui.js";
 import { SkipCase, fixtureKey, fixtureKeys, requireManifest, type HarnessContext, type TestCase } from "./types.js";
 
 const MISSING_KEY = "ZZZZZZZZ";
@@ -518,6 +521,28 @@ export const toolCases: TestCase[] = [
       const highlight = all.items[0];
       assert.deepEqual(highlight.tags.map((t: any) => t.tag), ["标注标签"]);
 
+      // Image annotations: status on every image annotation, its cached PNG attached after the JSON by default.
+      const imageKey = fixtureKey(ctx, "ann-image");
+      const withImage = await client.callTool("get_annotations", { key: attKey });
+      for (const ann of withImage.json.items) {
+        if (ann.annotationType !== "image") assert.equal(ann.image, null, `${ann.key} image`);
+      }
+      const image = withImage.json.items.find((a: any) => a.key === imageKey).image;
+      assert.equal(image.exists, true, `cached image: ${image.note}`);
+      assert.equal(image.included, true);
+      assert.ok(isInside(path.join(ctx.layout.dataDir, "cache", "library"), image.cachePath), `cachePath ${image.cachePath}`);
+      assert.equal(withImage.extra.length, 1);
+      const png = withImage.extra[0] as { type: string; data: string; mimeType: string };
+      assert.equal(png.type, "image");
+      assert.equal(png.mimeType, "image/png");
+      const bytes = Buffer.from(png.data, "base64");
+      assert.equal(bytes.length, image.bytes);
+      assert.deepEqual([...bytes.subarray(0, 8)], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+      const statusOnly = await client.callTool("get_annotations", { key: imageKey, includeImages: false });
+      assert.equal(statusOnly.extra.length, 0);
+      assert.equal(statusOnly.json.items[0].image.included, false);
+      assert.equal(statusOnly.json.items[0].image.exists, true);
+
       const filtered = await client.tool("get_annotations", { key: attKey, types: ["highlight", "underline"] });
       assert.deepEqual(sortedKeys(filtered.items), fixtureKeys(ctx, ["ann-highlight", "ann-underline"]).sort());
       const noPosition = await client.tool("get_annotations", { key: attKey, includePosition: false });
@@ -579,6 +604,53 @@ export const toolCases: TestCase[] = [
       assert.equal((await client.toolError("get_attachment_path", { key: fixtureKey(ctx, "item-zh-article") })).code, "NOT_FOUND");
       assert.equal((await client.toolError("get_attachment_path", { key: fixtureKey(ctx, "note-child") })).code, "WRONG_ITEM_TYPE");
       return { stored: stored[0].path, linked: linked.path, missingNotes: missing.map((a: any) => a.note) };
+    },
+  },
+  {
+    id: "tools.get_fulltext",
+    title: "get_fulltext: whole indexed PDF in one call as a second text item; no text for a missing file",
+    requires: ["bridge", "fixtures"],
+    async run(ctx) {
+      const client = ctx.mcp();
+      const storedKey = fixtureKey(ctx, "att-stored-pdf");
+      const whole = await client.callTool("get_fulltext", { key: fixtureKey(ctx, "item-pdf-parent") });
+      assert.equal(whole.isError, false, whole.text);
+      const info = whole.json;
+      assert.equal(info.key, storedKey, "best attachment of the parent");
+      assert.equal(info.parentTitle, ITEMS.find((i) => i.id === "item-pdf-parent")?.title);
+      assert.equal(info.indexState, "indexed");
+      assert.equal(info.source, "cache");
+      assert.equal(info.totalPages, PDF_PAGES.length);
+      assert.equal(info.indexedPages, PDF_PAGES.length);
+      assert.equal(info.complete, true);
+      assert.equal(info.nextOffset, null);
+      assert.equal(info.note, null);
+      assert.equal(info.text, true);
+      assert.equal(whole.extra.length, 1);
+      const body = (whole.extra[0] as { type: string; text: string }).text;
+      assert.equal(body.length, info.totalChars);
+      assert.equal(info.returnedChars, info.totalChars);
+      for (const line of PDF_PAGES.flat()) assert.ok(normalizeSpaces(body).includes(line), `full text lacks: ${line}`);
+
+      const tail = await client.callTool("get_fulltext", { key: storedKey, offset: 10, maxLength: 1000 });
+      assert.equal((tail.extra[0] as { text: string }).text, body.slice(10));
+      assert.equal(tail.json.offset, 10);
+
+      // The seed's missing files were indexed when added and deleted afterwards: the file is gone, the extracted text
+      // is not (as for an attachment whose file is not synced to this computer), so get_fulltext still reads it.
+      const missingKey = fixtureKey(ctx, "att-missing-stored");
+      assert.equal((await client.tool("get_attachment_path", { key: missingKey })).exists, false);
+      const missing = await client.callTool("get_fulltext", { key: missingKey });
+      assert.equal(missing.isError, false, missing.text);
+      assert.equal(missing.json.source, "cache");
+      assert.equal(missing.json.text, true);
+      assert.equal(missing.extra.length, 1);
+      assert.ok(normalizeSpaces((missing.extra[0] as { text: string }).text).includes(PDF_PAGES[0]![0]!));
+
+      assert.equal((await client.toolError("get_fulltext", { key: storedKey, offset: info.totalChars })).code, "INVALID_ARGUMENT");
+      assert.equal((await client.toolError("get_fulltext", { key: fixtureKey(ctx, "item-zh-article") })).code, "NOT_FOUND");
+      assert.equal((await client.toolError("get_fulltext", { key: fixtureKey(ctx, "note-child") })).code, "WRONG_ITEM_TYPE");
+      return { totalChars: info.totalChars, missingFileIndexState: missing.json.indexState };
     },
   },
   {

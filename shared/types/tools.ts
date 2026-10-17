@@ -159,6 +159,44 @@ export interface AttachmentPathInfo extends AttachmentSummary {
   note: string | null;
 }
 
+/**
+ * get_fulltext sizing. Without maxLength a call returns as much text as fits an estimated token budget chosen to stay
+ * under Claude Code's default MCP output cap (MAX_MCP_OUTPUT_TOKENS, 25,000) with room for the JSON metadata, so a
+ * typical paper comes back whole in one call.
+ */
+export const FULLTEXT_LIMITS = {
+  defaultTokenBudget: 20_000,
+  minLength: 1_000,
+  /** Zotero's default extensions.zotero.fulltext.textMaxLength: no cache file is longer. */
+  maxLength: 500_000,
+} as const;
+
+export type FulltextIndexState = "indexed" | "partial" | "unindexed" | "queued" | "unavailable";
+
+/** get_fulltext metadata (first content item); the text itself is the second content item when `text` is true. */
+export interface FulltextInfo extends AttachmentSummary {
+  /** Title of the parent item, when the attachment has one. */
+  parentTitle: string | null;
+  indexState: FulltextIndexState;
+  /** Where the text came from: Zotero's full-text cache, the not-yet-processed synced content, or nowhere. */
+  source: "cache" | "synced-content" | null;
+  /** PDF pages Zotero indexed and the document's page count, when Zotero recorded them. */
+  indexedPages: number | null;
+  totalPages: number | null;
+  /** Length of the whole available text in UTF-16 code units (0 without text). */
+  totalChars: number;
+  offset: number;
+  returnedChars: number;
+  /** True when the returned text reaches the end of the available text. */
+  complete: boolean;
+  /** Offset to pass to continue reading, or null. */
+  nextOffset: number | null;
+  /** True when a second content item carries the text. */
+  text: boolean;
+  /** Caveats (partial index, no text) and what to do instead. */
+  note: string | null;
+}
+
 export interface NoteDetail extends ItemRef {
   parentKey: string | null;
   noteTitle: string;
@@ -186,6 +224,33 @@ export interface AnnotationRef {
   pageLabel: string | null;
 }
 
+/**
+ * Byte caps for annotation images attached to one tool result (raw PNG bytes; base64 adds a third). An image
+ * over a cap is not attached; its AnnotationImage says why, so the model can request it on its own.
+ */
+export const ANNOTATION_IMAGE_LIMITS = {
+  perImageBytes: 2_000_000,
+  perCallBytes: 6_000_000,
+} as const;
+
+/** The cached rendering Zotero keeps of an image annotation (<data dir>/cache/library/<KEY>.png). */
+export interface AnnotationImage {
+  /** Where Zotero keeps (or would keep) the PNG; null when it cannot be computed. */
+  cachePath: string | null;
+  exists: boolean;
+  bytes: number | null;
+  /** True when the PNG is attached to this result as an image content item. */
+  included: boolean;
+  /** Why the image is not attached, or null. */
+  note: string | null;
+}
+
+/** Per-image status that get_current_context adds after the snapshot for selected image annotations. */
+export interface AnnotationImageStatus extends AnnotationImage {
+  libraryID: number;
+  key: string;
+}
+
 export interface AnnotationDetail extends AnnotationRef {
   itemID: number;
   attachmentKey: string;
@@ -201,4 +266,6 @@ export interface AnnotationDetail extends AnnotationRef {
   dateModified: string;
   /** zotero://open-pdf link that opens the reader at this annotation. */
   link: string;
+  /** Cached rendering of an image annotation; null for every other type. */
+  image: AnnotationImage | null;
 }

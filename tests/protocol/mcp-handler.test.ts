@@ -544,6 +544,23 @@ describe("tools/call", () => {
     assert.equal(tool.content[0]?.text, "null");
   });
 
+  it("puts the JSON text first and appends extra text and image items in order", async () => {
+    const extra = [
+      { type: "text" as const, text: "第一段\n\"quoted\"" },
+      { type: "image" as const, data: "iVBORw0KGgo=", mimeType: "image/png" },
+    ];
+    const { response, tool } = await callTool("get_fulltext", { key: "ABCD2345" }, {
+      overrides: { get_fulltext: async () => json({ text: true }, extra) },
+    });
+    assert.deepEqual(tool.content, [{ type: "text", text: '{"text":true}' }, ...extra]);
+    assert.equal(Number(response.headers["Content-Length"]), response.body.length);
+  });
+
+  it("omits an empty extra list", async () => {
+    const { tool } = await callTool("get_status", {}, { overrides: { get_status: async () => json({}, []) } });
+    assert.equal(tool.content.length, 1);
+  });
+
   it("keeps Chinese and astral text intact through the escaped envelope", async () => {
     const title = "注意力机制 😀   é";
     const { response, tool } = await callTool("get_status", {}, { overrides: { get_status: async () => json({ title }) } });

@@ -15,6 +15,7 @@ import {
   ZOTERO_ADDON_ID,
   endpointUrl,
 } from "../../../shared/types/bridge.js";
+import { TOOL_NAMES } from "../../../shared/types/tool-names.js";
 import { BULK_TAG } from "../fixtures/data.js";
 import { readBridgeFtl, renderFtlValue, stripIsolationMarks, type FtlMessage } from "../lib/ftl.js";
 import { getRequest } from "../lib/http.js";
@@ -58,6 +59,8 @@ async function toolBattery(ctx: HarnessContext, client: McpClient): Promise<numb
     ["list_attachments", { key: k("item-linked-parent") }],
     ["get_attachment_path", { key: k("item-pdf-parent") }],
     ["get_attachment_path", { key: k("att-missing-stored") }],
+    ["get_fulltext", { key: k("item-pdf-parent") }],
+    ["get_fulltext", { key: k("att-missing-stored") }],
     ["get_library_paths", {}],
     ["get_schema", {}],
     ["get_schema", { itemType: "journalArticle" }],
@@ -191,7 +194,7 @@ export const lifecycleCases: TestCase[] = [
         await waitForEndpoints(ctx, true);
         await assertBridgeOn(ctx);
         const tools = await ctx.mcp().rpc("tools/list");
-        assert.equal(tools.message.result.tools.length, 18);
+        assert.equal(tools.message.result.tools.length, TOOL_NAMES.length);
         return { whileDisabled: statuses, disableMs: off.ms, enableMs: on.ms };
       } finally {
         if (disabled) await ctx.seed.addon({ id: ZOTERO_ADDON_ID, action: "enable" }).catch(() => undefined);

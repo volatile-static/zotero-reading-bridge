@@ -83,7 +83,7 @@ describe("shared/instructions/context-policy.md", () => {
   });
 
   it("covers the server-instruction topics and front-loads a self-contained summary", () => {
-    for (const phrase of ["read-only", "libraryID + key", "nextCursor", "get_current_context", "own file-reading tools", "Untrusted content"]) {
+    for (const phrase of ["read-only", "libraryID + key", "nextCursor", "get_current_context", "get_fulltext", "own file-reading tools", "Untrusted content"]) {
       assert.ok(serverInstructions.includes(phrase), `server-instructions lacks: ${phrase}`);
     }
     // Codex's MCP docs ask for server instructions whose first 512 characters stand on their own.

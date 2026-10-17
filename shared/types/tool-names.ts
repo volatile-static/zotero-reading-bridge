@@ -20,6 +20,7 @@ export const TOOL_NAMES = [
   "get_annotations",
   "list_attachments",
   "get_attachment_path",
+  "get_fulltext",
   "get_library_paths",
   "get_schema",
 ] as const;

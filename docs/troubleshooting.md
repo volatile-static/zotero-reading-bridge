@@ -80,6 +80,10 @@
 |---|---|---|
 | `exists: false` | 文件尚未同步到本机（Zotero 同步设置为“按需下载”）、链接文件被移动，或附件本身是链接网址 | 在 Zotero 中打开一次附件触发下载，或修复链接；桥接**不会**下载文件 |
 | 路径正确但客户端读不到 | 客户端沙箱 / 权限限制了读取工作区以外的文件 | 按客户端提示授权读取，或把文件复制到工作区 |
+| `get_fulltext` 的 `indexState` 是 `partial`，正文只有前几页 | Zotero 按全文设置只索引了 PDF 的前若干页（首选项 `extensions.zotero.fulltext.pdfMaxPages`，默认 100）或前若干字符（`textMaxLength`） | 在 Zotero 设置 → 搜索中调高上限，再对该条目右键“重新索引条目”；或让模型用 `get_attachment_path` 读取 PDF |
+| `get_fulltext` 没有正文（`unindexed`、`unavailable`） | 附件尚未索引、是没有文字层的扫描 PDF，或是链接网址 | 在 Zotero 中右键“重新索引条目”；扫描件需先做 OCR；桥接不会自己建索引 |
+| 图片批注 `image.exists` 为 `false` | Zotero 只在阅读器渲染过图片批注后才写缓存图；从其他设备同步来的批注在本机可能还没有 | 在 Zotero 中打开该 PDF 并翻到批注所在页，再重新提问 |
+| 图片批注 `image.included` 为 `false`、`exists` 为 `true` | 单张超过 2 MB，或本次结果中的图片合计超过 6 MB | 让模型单独请求该批注（`get_annotations` 传该批注的 key），或打开 `cachePath` |
 | 全文搜索找不到明明存在的内容 | `fulltext` / `everything` 模式只使用 Zotero 已建立的全文索引 | 在 Zotero 中重建索引，或直接读取 PDF 文件 |
 | `search_items` 报 `INVALID_ARGUMENT`：“Zotero's full-text index cannot answer …” | 全文索引无法匹配 3 个字母以下的单词、单个汉字，以及中英文 / 数字混在一起的词（如 `AI模型`、`5G网络`）。对这类词 Zotero 只能逐个读取所有附件的全文缓存，大型文献库要几分钟，因此 `fulltext` 模式（以及 `everything` 模式中加了引号的词）直接拒绝，而不是悄悄忽略这些词 | 去掉这些词，或把中文和英文 / 数字部分分开检索（`AI模型` → `模型`）；短词改用 `fields` / `everything` 模式在标题、标签、笔记中匹配 |
 

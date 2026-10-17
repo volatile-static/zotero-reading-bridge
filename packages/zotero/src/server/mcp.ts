@@ -209,7 +209,7 @@ function toCallToolResult(output: ToolOutput): CallToolResult {
     case "text":
       return { content: [{ type: "text", text: output.text }] };
     case "json":
-      return { content: [{ type: "text", text: JSON.stringify(output.data) ?? "null" }] };
+      return { content: [{ type: "text", text: JSON.stringify(output.data) ?? "null" }, ...(output.extra ?? [])] };
     default:
       throw new TypeError("Tool handler returned an invalid ToolOutput");
   }

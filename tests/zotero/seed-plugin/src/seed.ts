@@ -3,8 +3,10 @@
  * TEST ONLY: this is the one place in the repository that writes Zotero data.
  */
 import {
+  ANNOTATION_CACHE_PNG,
   ANNOTATIONS,
   ATTACHMENTS,
+  CACHED_IMAGE_ANNOTATIONS,
   BULK_ITEM_COUNT,
   BULK_TAG,
   COLLECTIONS,
@@ -162,6 +164,19 @@ export async function seedFixtures(request: SeedRequest): Promise<SeedManifest> 
     } as any);
     manifest.annotations[spec.id] = ref(annotation);
   }
+
+  // The cached rendering get_annotations attaches; the reader would only write it after rendering the page.
+  for (const id of CACHED_IMAGE_ANNOTATIONS) {
+    const annotation = manifest.annotations[id];
+    if (!annotation) throw new Error(`Unknown fixture annotation ${id}`);
+    const blob = new Blob([new Uint8Array(ANNOTATION_CACHE_PNG)], { type: "image/png" });
+    await Zotero.Annotations.saveCacheImage({ libraryID, key: annotation.key }, blob);
+  }
+
+  // Index the stored PDF completely now (import only queues it), so get_fulltext has a full-text cache to read.
+  const storedPdf = manifest.attachments["att-stored-pdf"];
+  if (!storedPdf) throw new Error("Unknown fixture attachment att-stored-pdf");
+  await Zotero.Fulltext.indexItems([storedPdf.id], { complete: true });
 
   const search = new Zotero.Search({ libraryID, name: SAVED_SEARCH.name } as any);
   for (const condition of SAVED_SEARCH.conditions) {

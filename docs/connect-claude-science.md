@@ -13,7 +13,7 @@ Codex 和 Claude Code 通过 Hook 在每轮消息前自动附加 Zotero 快照�
 | 认证 | 无（不要配置令牌或 OAuth） |
 | 主机 | 只能用 `127.0.0.1`。客户端必须与 Zotero 运行在同一台电脑上，并且不能带浏览器的 `Origin` 头或 `Mozilla/` 开头的 User-Agent |
 
-客户端连上后会看到 18 个只读工具。为了让模型正确处理“当前论文 / 我的选择”，请同时导入无 Hook 技能：构建产物
+客户端连上后会看到 19 个只读工具。为了让模型正确处理“当前论文 / 我的选择”，请同时导入无 Hook 技能：构建产物
 `outputs/claude-science-zotero-skill/skills/zotero/SKILL.md`（源文件 `integrations/claude-science/skills/zotero/SKILL.md`，
 构建时展开其中的 include 标记）。不支持技能的客户端，可以把这个文件的正文作为系统提示或项目说明使用。
 
@@ -25,7 +25,8 @@ Codex 和 Claude Code 通过 Hook 在每轮消息前自动附加 Zotero 快照�
 - `status` 为 `empty`：什么都没选中，请用户在 Zotero 中选中或打开论文，或者按标题搜索。
 - `status` 为 `unavailable` 或调用失败：说明情况并用 `get_status` 诊断，不猜测。
 - 不调用 `capture_prompt_context`（它只供 Hook 使用）。
-- 读取 PDF：`get_attachment_path` 取得本地路径，再用客户端自己的文件读取能力打开；客户端无法读取本地文件时如实说明。
+- 读取全文：先用 `get_fulltext` 取得 Zotero 已提取的正文；只索引了部分页或没有正文时，再用 `get_attachment_path` 取得本地路径、用客户端自己的文件读取能力打开；客户端无法读取本地文件时如实说明。
+- 回答当前打开文献的问题前，先对阅读器中的附件调用 `get_fulltext`，依据正文作答；选中的图片批注由 `get_current_context` 附带图像。
 
 Claude 桌面应用（聊天 / Cowork）只接受 stdio 命令，经中继连接，见 [install-claude-desktop.md](install-claude-desktop.md)；它同样没有 Hook，使用同一个无 Hook 技能。
 

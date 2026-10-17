@@ -3,7 +3,13 @@
  * built on the raw HTTP client so every response header and status stays observable.
  */
 import { ENDPOINT_PATH } from "../../../shared/types/bridge.js";
-import { LATEST_PROTOCOL_VERSION, type CallToolResult, type ToolErrorPayload } from "../../../shared/types/index.js";
+import {
+  LATEST_PROTOCOL_VERSION,
+  type CallToolResult,
+  type ImageContent,
+  type TextContent,
+  type ToolErrorPayload,
+} from "../../../shared/types/index.js";
 import { postJson, type JsonPostOptions, type RawResponse, type RawResult } from "./http.js";
 
 export interface RpcOutcome {
@@ -14,10 +20,12 @@ export interface RpcOutcome {
 
 export interface ToolCall {
   result: CallToolResult;
-  /** Text of the single content item. */
+  /** Text of the first content item. */
   text: string;
   /** Parsed JSON of `text`, or undefined when it is not JSON. */
   json: any;
+  /** Content items after the first (full text, annotation images). */
+  extra: (TextContent | ImageContent)[];
   isError: boolean;
   ms: number;
 }
@@ -79,17 +87,22 @@ export class McpClient {
     }
     const result = outcome.message.result as CallToolResult;
     const content = Array.isArray(result?.content) ? result.content : [];
-    if (content.length !== 1 || content[0]?.type !== "text") {
-      throw new Error(`tools/call ${name}: expected exactly one text content item, got ${JSON.stringify(content).slice(0, 300)}`);
+    const [first, ...extra] = content;
+    if (first?.type !== "text") {
+      throw new Error(`tools/call ${name}: expected a text content item first, got ${JSON.stringify(content).slice(0, 300)}`);
     }
-    const text = content[0].text;
+    // Only JSON results may carry more items (full text, images); errors and hook JSON are always a single text.
+    if (extra.length > 0 && (result.isError === true || name === "capture_prompt_context")) {
+      throw new Error(`tools/call ${name}: expected exactly one content item, got ${content.length}`);
+    }
+    const text = first.text;
     let json: any;
     try {
       json = JSON.parse(text);
     } catch {
       json = undefined;
     }
-    return { result, text, json, isError: result.isError === true, ms: outcome.ms };
+    return { result, text, json, extra, isError: result.isError === true, ms: outcome.ms };
   }
 
   /** Call a tool that must succeed; returns its parsed JSON payload. */

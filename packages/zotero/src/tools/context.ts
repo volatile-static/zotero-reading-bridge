@@ -17,9 +17,12 @@ import {
   type CaptureParts,
   type SnapshotMeta,
 } from "../context/snapshot.js";
+import type { AnnotationImageStatus } from "../../../../shared/types/tools.js";
 import { sanitizeIdentifier } from "../util/text.js";
+import { loadAnnotationImage } from "../zotero/annotation-images.js";
 import { withTimeout } from "../zotero/library.js";
-import { json, text, type ToolHandler } from "./types.js";
+import { ImageBudget } from "./image-budget.js";
+import { json, text, type ExtraContent, type ToolHandler } from "./types.js";
 
 /** Model-facing rules injected with every hook snapshot. */
 const HOOK_RULES = extractSection(contextPolicy, "hook-rules");
@@ -76,8 +79,27 @@ const getCurrentContext: ToolHandler = async (args) => {
     promptId: null,
     maxTextLength: clampTextLength(args.maxTextLength),
   });
-  return json(snapshot);
+  return json(snapshot, await selectedImageContent(snapshot));
 };
+
+/**
+ * Selected image annotations, shown as images: a second text item lists each one's AnnotationImageStatus (in order),
+ * followed by the PNGs that were attached. The snapshot JSON itself is unchanged, so it stays identical to the
+ * hook's snapshot (which cannot carry images).
+ */
+async function selectedImageContent(snapshot: ContextSnapshot): Promise<ExtraContent[]> {
+  const selected = snapshot.reader?.selectedAnnotations.items.filter((ann) => ann.annotationType === "image") ?? [];
+  if (selected.length === 0) return [];
+  const budget = new ImageBudget();
+  const statuses: AnnotationImageStatus[] = [];
+  const images: ExtraContent[] = [];
+  for (const { libraryID, key } of selected) {
+    const loaded = await loadAnnotationImage({ libraryID, key }, budget);
+    statuses.push({ libraryID, key, ...loaded.image });
+    if (loaded.content) images.push(loaded.content);
+  }
+  return [{ type: "text", text: JSON.stringify({ selectedAnnotationImages: statuses }) }, ...images];
+}
 
 const capturePromptContext: ToolHandler = async (args) => {
   const snapshot = await takeSnapshot({

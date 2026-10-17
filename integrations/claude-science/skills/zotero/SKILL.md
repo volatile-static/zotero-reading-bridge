@@ -32,7 +32,8 @@ automatically, so the current state must be fetched explicitly and is valid only
 - The bridge only listens on `http://127.0.0.1:23119/bridge/mcp` on the computer where Zotero runs. A client
   running elsewhere, or inside a sandbox that blocks local ports, cannot reach it. Report the error instead of
   retrying in a loop, and do not suggest exposing Zotero to the network.
-- If the client cannot open local files, say that the PDF text is not readable here and work from metadata, notes
-  and annotations instead.
+- `get_fulltext` returns the text Zotero already extracted, so most documents can be read without opening local
+  files. If it has no or only partial text and the client cannot open local files, say that the rest of the PDF is
+  not readable here and work from the available text, metadata, notes and annotations.
 
 <!-- @include shared/instructions/research-workflow.md -->

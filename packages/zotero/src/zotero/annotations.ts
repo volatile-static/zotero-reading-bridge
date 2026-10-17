@@ -1,8 +1,11 @@
 /**
  * Annotation collection and serialization (Zotero sandbox only).
  */
+import type { ImageContent } from "../../../../shared/types/mcp.js";
 import type { AnnotationDetail } from "../../../../shared/types/tools.js";
 import { ANNOTATION_TEXT_MAX, annotationPageIndex, tagInfos } from "../tools/data-format.js";
+import type { ImageBudget } from "../tools/image-budget.js";
+import { loadAnnotationImage } from "./annotation-images.js";
 import type { ZItem } from "./library.js";
 import { itemsByID } from "./lookup.js";
 import { annotationLink, annotationPosition, annotationRef, safe, sqlToISO } from "./refs.js";
@@ -25,7 +28,15 @@ export function regularItemAnnotations(item: ZItem): ZItem[] {
   return itemsByID(safe(() => item.getAttachments(false), [] as number[])).flatMap(attachmentAnnotations);
 }
 
-export function annotationDetail(ann: ZItem, includePosition: boolean): AnnotationOutput {
+/**
+ * Serialize one annotation. For an image annotation, `images` (when given) receives its cached PNG as an image
+ * content item if `budget` admits it; with `budget` null only the image status is reported.
+ */
+export async function annotationDetail(
+  ann: ZItem,
+  includePosition: boolean,
+  images: { budget: ImageBudget | null; out: ImageContent[] },
+): Promise<AnnotationOutput> {
   const attachment = safe(() => ann.parentItem, undefined);
   const position = annotationPosition(ann);
   const sortIndex = safe(() => ann.annotationSortIndex as string | null, null) || null;
@@ -41,7 +52,13 @@ export function annotationDetail(ann: ZItem, includePosition: boolean): Annotati
     isExternal: safe(() => !!ann.annotationIsExternal, false),
     dateModified: sqlToISO(safe(() => ann.dateModified, "")),
     link: annotationLink(ann),
+    image: null,
   };
+  if (detail.annotationType === "image") {
+    const loaded = await loadAnnotationImage({ libraryID: detail.libraryID, key: detail.key }, images.budget);
+    detail.image = loaded.image;
+    if (loaded.content) images.out.push(loaded.content);
+  }
   // Ink paths and image rects are bounded by the page, so positions are returned as stored.
   if (includePosition) detail.position = position;
   return detail;

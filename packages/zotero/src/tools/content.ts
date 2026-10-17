@@ -2,6 +2,7 @@
  * User content (Zotero sandbox only): list_tags, get_notes, get_annotations.
  * Notes and annotations are the user's source material; they are returned as data, never interpreted.
  */
+import type { ImageContent } from "../../../../shared/types/mcp.js";
 import type { ToolName } from "../../../../shared/types/tool-names.js";
 import type { TagInfo } from "../../../../shared/types/tools.js";
 import { annotationDetail, attachmentAnnotations, regularItemAnnotations } from "../zotero/annotations.js";
@@ -12,6 +13,7 @@ import { safe } from "../zotero/refs.js";
 import { tagCountCache } from "../zotero/result-caches.js";
 import { boolArg, enumSet, intArg, requireKey, textArg } from "./data-args.js";
 import { containsFolded, tagInfos } from "./data-format.js";
+import { ImageBudget } from "./image-budget.js";
 import { paginate, paginateMapped, parsePageArgs } from "./pagination.js";
 import { compareCodeUnits } from "./search-plan.js";
 import { json, type ToolArgs, type ToolHandler, type ToolOutput } from "./types.js";
@@ -102,6 +104,8 @@ async function getAnnotations(args: ToolArgs): Promise<ToolOutput> {
   const page = parsePageArgs(args);
   const types = enumSet(args, "types", ANNOTATION_TYPES);
   const includePosition = boolArg(args, "includePosition", true);
+  // Selecting an image annotation means wanting to see it, so its PNG is attached unless the caller opts out.
+  const images = { budget: boolArg(args, "includeImages", true) ? new ImageBudget() : null, out: [] as ImageContent[] };
   const lib = await loadLibrary(args.libraryID);
   const item = await getItemByKey(lib, requireKey(args));
   let annotations: ZItem[];
@@ -122,7 +126,9 @@ async function getAnnotations(args: ToolArgs): Promise<ToolOutput> {
     const wanted: ReadonlySet<string> = types;
     annotations = annotations.filter((ann) => wanted.has(safe(() => String(ann.annotationType), "")));
   }
-  return json(await paginateMapped(annotations, page, (ann) => annotationDetail(ann, includePosition)));
+  const result = await paginateMapped(annotations, page, (ann) => annotationDetail(ann, includePosition, images));
+  // Images follow the JSON in item order; each image annotation's `image.included` says whether its PNG is among them.
+  return json(result, images.out);
 }
 
 export const contentHandlers = {

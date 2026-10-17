@@ -13,7 +13,7 @@ Claude 桌面应用 ──stdio──► zotero-relay.js（子进程，不监听
 
 | 组件 | 源码 | 构建产物 | 作用 |
 |---|---|---|---|
-| Zotero 插件 | `packages/zotero/` | `outputs/zotero-ai-bridge.xpi` | 在 Zotero 自带的本机 HTTP 服务器上提供 MCP 端点 `http://127.0.0.1:23119/bridge/mcp`（别名 `/codex/mcp`），18 个只读工具 |
+| Zotero 插件 | `packages/zotero/` | `outputs/zotero-ai-bridge.xpi` | 在 Zotero 自带的本机 HTTP 服务器上提供 MCP 端点 `http://127.0.0.1:23119/bridge/mcp`（别名 `/codex/mcp`），19 个只读工具 |
 | Codex 插件 | `packages/codex/` | `outputs/zotero-ai-bridge-codex.zip` | MCP 服务器 `zotero_bridge` + 每轮上下文 Hook + 使用说明技能 |
 | Claude Code 插件 | `packages/claude-code/` | `outputs/zotero-ai-bridge-claude-code.zip` | MCP 服务器 `plugin:zotero-ai-bridge:zotero` + 每轮上下文 Hook + 技能 |
 | Claude 桌面应用扩展 | `packages/claude-desktop/` | `outputs/zotero-ai-bridge-claude-desktop.mcpb` | stdio↔HTTP 中继 `server/zotero-relay.js`（零依赖 Node，只连 `127.0.0.1`，不监听端口）；也可在 `claude_desktop_config.json` 中手动配置 |
@@ -27,8 +27,8 @@ Claude 桌面应用 ──stdio──► zotero-relay.js（子进程，不监听
 | 当前选择 | `get_current_context`（按需），`capture_prompt_context`（仅供客户端 Hook 使用） |
 | 文献库结构 | `list_libraries`、`list_collections`、`get_collection`、`list_saved_searches`、`run_saved_search`、`list_tags` |
 | 条目 | `search_items`、`get_items`、`get_item_children` |
-| 内容 | `get_notes`、`get_annotations` |
-| 附件 | `list_attachments`、`get_attachment_path`（只返回本地路径与是否存在；读取 PDF 由客户端自己的文件工具完成） |
+| 内容 | `get_notes`、`get_annotations`（图片批注附带 Zotero 缓存的图像） |
+| 附件 | `get_fulltext`（Zotero 已提取的全文，常见论文一次返回整篇）；`list_attachments`、`get_attachment_path`（只返回本地路径与是否存在；全文缺失或不完整时，由客户端自己的文件工具读取 PDF） |
 
 所有条目、集合、笔记和批注都用 libraryID + key 标识；列表结果分页（`nextCursor`）。
 

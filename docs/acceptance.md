@@ -113,6 +113,11 @@
 | A-5 | `get_library_paths`：数据目录、存储目录、数据库路径、链接附件根目录 | 通过 | Zotero 11.0-beta.1+b0db83d9d（Gecko 153.3.0） | Windows 11，开发机，独立测试实例（临时配置文件与数据目录 `work/zotero-test/<运行>/`，端口 23139） | 2026-10-15 | `npm run test:zotero` 运行 20261015-125642-ad25b2（T1，见第 0 节）：74 通过 / 0 失败 / 1 跳过（`work/zotero-test/20261015-125642-ad25b2/report.json`）；用例 tools.get_library_paths。 |
 | A-6 | 链接网址附件：`path` 为 null，返回网址 | 未验证 | | | | |
 | A-7 | 同步设置为“按需下载”且文件尚未下载时：返回 `exists: false`，**不触发下载** | 未验证 | | | | |
+| A-8 | `get_fulltext`：已索引的 PDF 一次返回整篇（`complete: true`），第二个内容是按阅读顺序的正文；部分索引时 `indexState: "partial"` 并带 `note`；未索引时没有正文、`note` 建议读文件；不写数据库、不生成缓存文件 | 未验证 | | | | |
+| A-9 | `get_fulltext` 超出单次上限的长文：`complete: false`，用 `nextOffset` 续读直到读完，拼接结果与缓存文件一致 | 未验证 | | | | |
+| A-10 | 图片批注：`get_annotations` 默认在 JSON 后附带缓存 PNG（`image.included: true`）；`includeImages: false` 只给状态；缓存图不存在时 `exists: false` 并带 `note`，不报错；`get_current_context` 对选中的图片批注附带图像 | 未验证 | | | | |
+| A-11 | 客户端：Claude Code 与 Codex 把图片批注的 image 内容当作图像交给模型；`get_fulltext` 整篇结果不被客户端截断 | 未验证 | | | | |
+| A-12 | 阅读器问答：打开一篇 PDF 问“这篇的方法是什么”，模型先对阅读器附件调用 `get_fulltext` 再作答；选中图片批注后提问，模型调用 `get_annotations` 看图（Hook 客户端） | 未验证 | | | | |
 
 ## 6. 生命周期
 

@@ -1,7 +1,7 @@
 /**
  * Host-agnostic tool handler plumbing. Must not reference Zotero globals: imported by protocol tests in Node.
  */
-import type { ToolDefinition, ToolErrorCode } from "../../../../shared/types/index.js";
+import type { ImageContent, TextContent, ToolDefinition, ToolErrorCode } from "../../../../shared/types/index.js";
 
 export interface ToolCallContext {
   /** Negotiated (or header-derived) MCP protocol version of the request. */
@@ -10,9 +10,15 @@ export interface ToolCallContext {
   endpointPath: string;
 }
 
-/** What a handler produces. JSON is serialized compactly into one text content item. */
+/** Content items a JSON result may carry after its JSON text: a long document body, annotation images. */
+export type ExtraContent = TextContent | ImageContent;
+
+/**
+ * What a handler produces. JSON is serialized compactly into the first text content item; `extra` items follow it,
+ * so a client that ignores them still gets the complete JSON (which says what each extra item is).
+ */
 export type ToolOutput =
-  | { kind: "json"; data: unknown }
+  | { kind: "json"; data: unknown; extra?: readonly ExtraContent[] }
   /** Raw text, sent verbatim as the single text content item (used for hook JSON). */
   | { kind: "text"; text: string };
 
@@ -40,8 +46,8 @@ export interface ToolRegistry {
   handler(name: string): ToolHandler | undefined;
 }
 
-export function json(data: unknown): ToolOutput {
-  return { kind: "json", data };
+export function json(data: unknown, extra?: readonly ExtraContent[]): ToolOutput {
+  return extra && extra.length > 0 ? { kind: "json", data, extra } : { kind: "json", data };
 }
 
 export function text(value: string): ToolOutput {

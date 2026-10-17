@@ -14,7 +14,8 @@ as a `<zotero_snapshot>` block. No snapshot means the hook did not run for this 
 (Codex hook review), it failed, or Zotero was not running when this Codex session started. In that case follow the
 policy below and call `get_current_context` when the user refers to the current paper or selection.
 
-To read an attachment, get its path with `get_attachment_path`, then open the file with Codex's own file or shell
+To read a document, call `get_fulltext` first: it returns the text Zotero already extracted. Only when that text is
+missing or partial, get the file path with `get_attachment_path` and open the file with Codex's own file or shell
 tools; reading outside the workspace may need approval depending on the sandbox settings.
 
 <!-- @include shared/instructions/research-workflow.md -->

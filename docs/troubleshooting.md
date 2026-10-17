@@ -55,6 +55,10 @@
 | 手动注册后，换个目录就找不到服务器 | 注册时没有加 `--scope`，是 local 作用域，只对执行命令时所在的项目目录生效（设置页复制的命令已带 `--scope user`） | `claude mcp remove zotero_bridge` 后加 `--scope user` 重新注册 |
 | 插件改动没有生效 | 长期安装使用缓存副本 | `claude plugin marketplace update zotero-ai-bridge-local` + `claude plugin update zotero-ai-bridge@zotero-ai-bridge-local`，然后重启；`--plugin-dir` 方式用 `/reload-plugins` |
 
+## 3a. Claude 桌面应用
+
+见 [install-claude-desktop.md](install-claude-desktop.md) 第 6 节（Zotero 不可达、插件被禁用、`node` 不在 PATH、参数错误、配置未生效）。
+
 ## 4. 快照内容
 
 | 现象 | 原因 | 处理 |

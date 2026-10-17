@@ -40,6 +40,8 @@ export const CLIENT_SERVER_NAMES = {
    * scope (local > project > user) would shadow the bridge and receive the hook calls.
    */
   claudeCodeManual: "zotero_bridge",
+  /** Claude Desktop manual stdio registration (claude_desktop_config.json) of the relay; no hooks there. */
+  claudeDesktopManual: "zotero_bridge",
 } as const;
 
 export const PLUGIN_NAME = "zotero-ai-bridge";

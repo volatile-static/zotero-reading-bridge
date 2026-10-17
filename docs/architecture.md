@@ -3,7 +3,8 @@
 ## 1. 总览
 
 Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 插件在 Zotero 自带的本机 HTTP 服务器上注册一个
-无状态的 MCP 端点；客户端（Codex、Claude Code、其他 MCP 客户端）通过 HTTP 调用它。所有工具只读。
+无状态的 MCP 端点；客户端（Codex、Claude Code、其他 MCP 客户端）通过 HTTP 调用它；只支持 stdio 的 Claude 桌面应用经一个
+子进程中继调用它（决策 22）。所有工具只读。
 
 ```
 同一台电脑
@@ -17,6 +18,9 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 │    ├─ 技能 zotero                               │   （别名 /codex/mcp，行为完全相同）
 │    ├─ MCP 服务器 plugin:zotero-ai-bridge:zotero ┤
 │    └─ UserPromptSubmit Hook → 同上               │
+│                                                │
+├─ Claude 桌面应用（无 Hook）                     │
+│    └─ stdio 子进程 zotero-relay.js ─────────────┤
 │                                                │
 ├─ 其他 MCP 客户端（无 Hook，配合无 Hook 技能）────┤
 │                                                ▼
@@ -42,6 +46,7 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 | `packages/zotero/` | Zotero 插件：`bootstrap.ts`（生命周期）、`src/main.ts`（启动 / 关闭）、`src/server/`（HTTP 适配、MCP 协议、访问检查、响应、参数校验）、`src/tools/`（工具实现）、`src/context/`（界面状态快照与 Hook 输出）、`src/settings/` 与 `content/`（设置页面）、`locale/`（界面文字） |
 | `packages/codex/` | Codex 插件（见 [install-codex.md](install-codex.md)） |
 | `packages/claude-code/` | Claude Code 插件（见 [install-claude-code.md](install-claude-code.md)） |
+| `packages/claude-desktop/` | Claude 桌面应用扩展：`manifest.json`（MCPB）与 stdio↔HTTP 中继 `src/relay.ts`、`src/main.ts`（构建时打包为 `server/zotero-relay.js`，见 [install-claude-desktop.md](install-claude-desktop.md)） |
 | `integrations/claude-science/` | 无 Hook 技能与 Claude Science 说明 |
 | `scripts/build.ts`、`scripts/verify-package.ts` | 类型检查、打包、产物校验 |
 | `tests/unit`、`tests/protocol` | Node 单元测试与协议测试（含模拟 Zotero 服务器怪癖的 HTTP 服务器和官方 MCP SDK 客户端） |
@@ -141,7 +146,8 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 
 - 端点没有身份验证。本机任何程序（包括其他 Windows 用户账户下的程序、恶意软件）只要能连上 `127.0.0.1:23119`，
   就能读取整个文献库的元数据、笔记、批注和附件路径。只在你信任的电脑上启用；要停止桥接，在 Zotero 中禁用插件（**工具 → 插件**）。
-- **绝不**通过局域网、端口转发、反向代理、内网穿透或隧道暴露这个端口（Zotero 的 Host 检查也会拒绝外部主机名）。
+- **绝不**通过局域网、端口转发、反向代理、内网穿透、隧道或监听端口的中继暴露这个端口（Zotero 的 Host 检查也会拒绝外部主机名）。
+  Claude 桌面应用的 stdio 中继不监听端口，不扩大可访问范围（决策 22）。
 
 **反方向同样没有验证：本机程序可以冒充桥接**
 
@@ -225,6 +231,20 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 21. **全文检索不回退到逐文件扫描**：Zotero 的全文索引无法回答 3 个字母以下的单词、单个汉字和中英文 / 数字混合的词；对加引号的这类词，
     Zotero 会逐个读取文献库中所有附件的全文缓存（大型文献库要几分钟，客户端超时后仍在运行）。`search_items` 在 `fulltext` 模式下
     （以及 `everything` 模式中加了引号的词）对这类词直接返回 `INVALID_ARGUMENT` 并逐个说明原因，而不是悄悄忽略或强制扫描。
+22. **Claude 桌面应用经 stdio 子进程中继接入，不扩大暴露面**：Claude 桌面应用的本地 MCP 服务器（`claude_desktop_config.json`）和
+    扩展（`.mcpb`）只能是 stdio 命令，远程连接器只接受公网 https 地址，无法直接使用 `http://127.0.0.1:23119/bridge/mcp`。因此提供
+    零依赖的 Node 中继 `packages/claude-desktop/src/relay.ts`：从 stdin 逐行读取 JSON-RPC，原样 POST 给桥接，把 JSON 响应写成一行输出
+    （202 不输出），Zotero 不可达或回答非 JSON 时对每个请求回 `-32000` 错误。它**不**改变第 5 节的安全边界：
+    - 中继是客户端启动的子进程，只通过自己的 stdin / stdout 管道与父进程通信，**不打开任何监听端口**，也就没有新的入口。能驱动它的只有
+      启动它的那个进程；而能启动本机进程的程序本来就能直接连接 `127.0.0.1:23119`。所以它与 Codex、Claude Code 直接发 HTTP 请求等价。
+    - 隧道、端口转发、反向代理和**监听端口的中继**仍然禁止：它们打开新的可连接入口（局域网、公网或另一个回环端口），把无鉴权的
+      文献库交给更多的程序或机器。早先文档中“不提供本地中继进程”指的正是这一类，以及为绕过 Claude Science 沙箱而运行的转发程序。
+    - 目标主机写死为 `127.0.0.1`，只有端口可配置；`--host` 只接受 `127.0.0.1`，其他值（`localhost`、`::1`、`0.0.0.0`、局域网地址）直接
+      以退出码 2 结束。使用专用的 `http.Agent`，不读取代理环境变量；请求不带 `Origin`，User-Agent 为 `zotero-ai-bridge-relay/<版本>`，
+      所以 Zotero 与插件的 Origin / 浏览器检查（决策 17）照常生效。
+    - 中继不做协议处理（不解析参数、不缓存、不发 `Mcp-Session-Id`），只在 `initialize` 成功后把协商的版本放进 `MCP-Protocol-Version`
+      头；日志只写方法名和 HTTP 状态。冒充风险（第 5 节）不变：Zotero 未运行时占用端口的程序同样能回答中继。
+    `npm run verify` 检查打包后的中继只引用 `node:` 内置模块、不含 `createServer` / `listen`、不设置 `Origin`，并实际运行它。
 
 ## 7. 与原计划的差异
 
@@ -248,7 +268,8 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 | 采集内容 | 选中条目、当前分类、阅读器附件、选中文字、选中批注与时间戳 | 另外采集打开的笔记（笔记标签页或独立笔记窗口）与焦点（`focus`），主窗口关闭时读取独立阅读器 / 笔记窗口 | Zotero 11 默认在标签页中打开笔记；笔记或阅读器标签页在前台时，条目列表的选择属于隐藏的文献库标签页，不能当作“这篇”（决策 20）。 |
 | 全文检索 | 全文检索仅用 Zotero 已有索引 | 一致；索引无法回答的词（3 个字母以下、单个汉字、中英文混合）在 `fulltext` 模式及 `everything` 模式的引号词中直接报 `INVALID_ARGUMENT` | Zotero 对这类词会退回到逐个读取所有附件的全文缓存，这已不是“用已有索引”，且在大型文献库上要几分钟（决策 21）。 |
 | 分页实现 | 分页默认 50、上限 200，返回后续分页信息 | 一致；翻页结果在内存中按请求缓存，Zotero 数据一变就清空 | 避免每翻一页都在 Zotero 主线程上重新检索和排序（决策 19）。 |
-| Claude Science | Connectors + Skill，HTTP URL 入口；回环可达性、JSON-only 兼容性、Origin 请求头均需实测，被拒绝则记录不兼容 | 只交付无 Hook 技能，状态“不兼容”（0.1.63 实测，G-4）；复测步骤列出 Origin / User-Agent 与 JSON-only 的检查 | Claude Science 的远程连接器只接受公网 https 地址（0.1.63 实测报 `safeFetch: https-only`），其沙箱代理也拦截过 `127.0.0.1:23119`；中继或隧道会突破安全边界（决策 15）。 |
+| Claude Science | Connectors + Skill，HTTP URL 入口；回环可达性、JSON-only 兼容性、Origin 请求头均需实测，被拒绝则记录不兼容 | 只交付无 Hook 技能，状态“不兼容”（0.1.63 实测，G-4）；复测步骤列出 Origin / User-Agent 与 JSON-only 的检查 | Claude Science 的远程连接器只接受公网 https 地址（0.1.63 实测报 `safeFetch: https-only`），其沙箱代理也拦截过 `127.0.0.1:23119`；隧道、端口转发或监听端口的中继会突破安全边界（决策 15）。Claude 桌面应用使用的 stdio 子进程中继不在此列（决策 22），但它在 Claude Science 中是否可用、沙箱是否放行都未验证，本方案不把它作为 Claude Science 的接入方式。 |
+| Claude 桌面应用 | 未规定 | `.mcpb` 扩展（或 `claude_desktop_config.json` 手动配置）运行零依赖的 stdio↔HTTP 中继，配合无 Hook 技能；未在真实应用中验证（[acceptance.md](acceptance.md) 第 17 节） | 桌面应用的本地 MCP 服务器和扩展只接受 stdio 命令，远程连接器只接受公网 https；中继作为子进程只通过管道通信、不监听端口，目标固定为 `127.0.0.1`（决策 22）。 |
 
 ## 8. 运行约束与已知限制
 
@@ -265,17 +286,18 @@ Zotero AI Bridge 由一个 Zotero 插件和若干客户端配置组成。Zotero 
 | 调试日志隐私 | 见第 5 节“隐私”：Zotero 自身的调试日志会记录请求头、请求正文前 1000 个字符，以及工具调用中经手的附件路径与文件名、数据库查询参数和全文检索词；插件自己的日志与响应日志只有摘要。与 AI 客户端一起使用时关闭调试日志。 |
 | 冒充桥接 | 客户端无法验证 `127.0.0.1:23119` 上的服务器（见第 5 节）：Zotero 未运行时占用该端口的程序可经 Hook 向每条消息注入文字。多人共用的电脑上不要安装客户端插件。 |
 | Codex 的 Hook 上下文 | Codex 对 mcp_tool Hook 固定按约 2500 token（UTF-8 字节数 / 4）转存附加上下文；插件对 Codex 另限 9600 字节，中文选区因此比 Claude Code 中更早被缩短（快照的 `warnings` 中说明），需要全文时让模型调用 `get_current_context`。 |
+| Claude 桌面应用 | 没有 Hook，不会每轮附加快照；模型按服务器说明和无 Hook 技能在需要时调用 `get_current_context`。Zotero 未运行时中继对每个请求回 JSON-RPC 错误：发生在启动时，`initialize` 失败，服务器显示为失败，启动 Zotero 后需重启 Claude 桌面应用（或重新启用扩展）；发生在会话中途，只有那几次工具调用失败，Zotero 重新启动后下一次调用即可成功（中继无状态）。未实测。 |
 | 结果缓存 | 翻页结果与标签计数在内存中缓存（120 秒，Zotero 数据变化即清空，见决策 19）；Zotero 的“显示子集合中的条目”设置变化后，`get_collection` 与 `search_items(collectionKey)` 立即按新设置计算。 |
 
 ## 9. 测试分层
 
 | 层次 | 内容 | 命令 |
 |---|---|---|
-| 类型检查 | 五个 tsconfig（Zotero 插件、设置页面、脚本、测试、测试用种子插件） | `npm run typecheck` |
-| 单元测试 | 纯函数：参数校验、分页、文本处理、访问检查、回环监听验证、响应、注册表、工具契约、检索计划与全文可检索性、结果缓存、快照与 Hook 输出（字符与 UTF-8 字节预算）、说明段落、打包与启动契约 | `npm test` |
-| 协议测试 | 模拟 Zotero 服务器怪癖的 Node HTTP 服务器 + 官方 MCP SDK 客户端（2025-11-25 与 2025-06-18）+ 原始 HTTP 用例 | `npm test` |
+| 类型检查 | 六个 tsconfig（Zotero 插件、设置页面、脚本、测试、测试用种子插件、Claude 桌面应用中继） | `npm run typecheck` |
+| 单元测试 | 纯函数：参数校验、分页、文本处理、访问检查、回环监听验证、响应、注册表、工具契约、检索计划与全文可检索性、结果缓存、快照与 Hook 输出（字符与 UTF-8 字节预算）、说明段落、打包与启动契约、Claude 桌面应用中继（参数只接受 127.0.0.1、逐行转发、202 不输出、Zotero 不可达时的 JSON-RPC 错误、请求头不含 Origin） | `npm test` |
+| 协议测试 | 模拟 Zotero 服务器怪癖的 Node HTTP 服务器 + 官方 MCP SDK 客户端（2025-11-25 与 2025-06-18）+ 原始 HTTP 用例；SDK 的 stdio 客户端启动中继子进程，经中继完成 initialize / tools/list / tools/call | `npm test` |
 | 客户端静态检查 | 插件清单、Hook 结构与占位符、服务器名一致性、示例配置、验收记录格式 | `npm test`（`tests/clients/plugin-manifests.test.ts`） |
 | 集成测试工具自检 | 路径安全、测试配置文件首选项、夹具、原始 HTTP 客户端、用例目录（不启动 Zotero） | `npm test`（`tests/zotero/harness.test.ts`） |
-| 打包校验 | 产物结构、清单字段、引用资源、敏感信息与本机路径扫描 | `npm run build` 后 `npm run verify` |
+| 打包校验 | 产物结构、清单字段、引用资源、敏感信息与本机路径扫描；`.mcpb` 的清单与中继（只用 Node 内置模块、不监听、不带 Origin），并实际运行打包后的中继（拒绝 `--host 0.0.0.0`，Zotero 不可达时返回 JSON-RPC 错误） | `npm run build` 后 `npm run verify` |
 | Zotero 集成测试 | 独立测试配置文件、端口 23139、合成数据，覆盖全部工具、上下文快照、生命周期、设置页与本地化、只读检查；加 `--debug-output` 时还检查插件自己的调试日志行只有摘要 | `npm run test:zotero`（可加 `--debug-output`） |
 | 手动验收 | 真实 Codex / Claude Code / 无 Hook 客户端 | `tests/clients/*/README.md`，记录于 [acceptance.md](acceptance.md) |

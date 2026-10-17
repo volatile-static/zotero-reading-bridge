@@ -12,7 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { BRIDGE_NAME } from "../shared/types/bridge.js";
 import { PLUGIN_NAME } from "../shared/types/hook.js";
-import { bundleClassicScript, bundleForInspection } from "./lib/bundle.js";
+import { bundleClassicScript, bundleForInspection, bundleNodeScript } from "./lib/bundle.js";
 import { bundleContractProblems, endpointRegistrationProblems } from "./lib/checks.js";
 import { errorMessage, isMainModule, repoRootFrom } from "./lib/cli.js";
 import {
@@ -30,6 +30,11 @@ import {
 import { expandIncludes, findIncludeMarkers } from "./lib/includes.js";
 import {
   CLIENT_PACKAGES,
+  DESKTOP_MANIFEST,
+  DESKTOP_NODE_TARGET,
+  DESKTOP_RELAY_ENTRY,
+  DESKTOP_RELAY_OUT,
+  DESKTOP_SOURCE_DIR,
   ENDPOINT_MODULE,
   MARKETPLACE_MANIFESTS,
   OUTPUTS_DIR,
@@ -82,7 +87,7 @@ interface BuildContext {
   log: (line: string) => void;
 }
 
-const STAGE_NAMES = { zotero: "zotero", science: "claude-science" } as const;
+const STAGE_NAMES = { zotero: "zotero", science: "claude-science", desktop: "claude-desktop" } as const;
 
 function abs(root: string, rel: string): string {
   return path.join(root, ...rel.split("/"));
@@ -245,6 +250,24 @@ function stageTree(ctx: BuildContext, sourceDir: string, stageName: string, mani
   ctx.log(`staged ${sourceDir} (${files.length} files)`);
 }
 
+/**
+ * Claude Desktop extension: manifest (version injected), the relay bundled from src/ (TypeScript sources and tsconfig
+ * are not shipped), and the other files of the package directory as they are.
+ */
+async function stageDesktop(ctx: BuildContext): Promise<void> {
+  const manifest = `${DESKTOP_SOURCE_DIR}/${DESKTOP_MANIFEST}`;
+  stage(ctx, STAGE_NAMES.desktop, DESKTOP_MANIFEST, withVersion(ctx, manifest, requireFile(ctx, manifest)));
+  requireFile(ctx, DESKTOP_RELAY_ENTRY);
+  stage(ctx, STAGE_NAMES.desktop, DESKTOP_RELAY_OUT, await bundleNodeScript(ctx.root, DESKTOP_RELAY_ENTRY, DESKTOP_NODE_TARGET, ctx.version));
+  ctx.log(`bundled ${DESKTOP_RELAY_ENTRY} -> ${DESKTOP_RELAY_OUT}`);
+  for (const rel of walkFiles(ctx.root, DESKTOP_SOURCE_DIR, ctx.rules)) {
+    const inner = relativeTo(DESKTOP_SOURCE_DIR, rel);
+    if (inner === DESKTOP_MANIFEST || isTypeScriptSource(rel)) continue;
+    if (inner === DESKTOP_RELAY_OUT) throw new Error(`${rel} would overwrite the relay bundle; delete the stale file`);
+    stage(ctx, STAGE_NAMES.desktop, inner, requireFile(ctx, rel));
+  }
+}
+
 // ---------------------------------------------------------------------------------------------- packaging
 
 function stagedEntries(ctx: BuildContext, stageName: string): ZipInputEntry[] {
@@ -309,9 +332,11 @@ export async function runBuild(options: BuildOptions): Promise<BuildInfo> {
     await stageZotero(ctx);
     for (const client of CLIENT_PACKAGES) stageTree(ctx, client.sourceDir, client.id, client.manifest);
     stageTree(ctx, SCIENCE_SOURCE_DIR, STAGE_NAMES.science, null);
+    await stageDesktop(ctx);
 
     await writeArchive(ctx, OUTPUT_NAMES.xpi, stagedEntries(ctx, STAGE_NAMES.zotero));
     for (const client of CLIENT_PACKAGES) await writeArchive(ctx, client.archive, stagedEntries(ctx, client.id));
+    await writeArchive(ctx, OUTPUT_NAMES.claudeDesktop, stagedEntries(ctx, STAGE_NAMES.desktop));
     writeScienceDirectory(ctx);
     await writeArchive(ctx, OUTPUT_NAMES.source, sourceEntries(ctx));
 

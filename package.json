@@ -9,7 +9,7 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "typecheck": "tsc -p packages/zotero/tsconfig.json && tsc -p packages/zotero/content/tsconfig.json && tsc -p scripts/tsconfig.json && tsc -p tests/tsconfig.json && tsc -p tests/zotero/seed-plugin/tsconfig.json",
+    "typecheck": "tsc -p packages/zotero/tsconfig.json && tsc -p packages/zotero/content/tsconfig.json && tsc -p scripts/tsconfig.json && tsc -p tests/tsconfig.json && tsc -p tests/zotero/seed-plugin/tsconfig.json && tsc -p packages/claude-desktop/tsconfig.json",
     "test": "node --import tsx --test \"tests/unit/**/*.test.ts\" \"tests/protocol/**/*.test.ts\" \"tests/clients/**/*.test.ts\" \"tests/zotero/*.test.ts\"",
     "build": "tsx scripts/build.ts",
     "verify": "tsx scripts/verify-package.ts",

@@ -100,7 +100,7 @@ Claude Science 更新后，按该文件“如何复测”一节逐步操作：
 - 两种情况都按“如何复测”第 6 步，用 Zotero 调试日志记录原计划要求实测的三项：请求是否到达 Zotero（回环可达性）、是否带 `Origin`
   请求头或 `Mozilla/` User-Agent（Zotero 的 `Preventing request from browser` 或插件的 403）、是否接受 JSON-only 响应。
 
-**不要**为了让 Claude Science 连上而使用公网隧道、端口转发、反向代理、本地中继或修改沙箱 / 代理规则：桥接没有认证，
+**不要**为了让 Claude Science 连上而使用公网隧道、端口转发、反向代理、监听端口的本地中继或修改沙箱 / 代理规则：桥接没有认证，
 这些做法会把整个文献库暴露出去。
 
 ## 4. 只读（O-4）

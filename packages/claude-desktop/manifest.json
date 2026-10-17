@@ -1,0 +1,34 @@
+{
+  "manifest_version": "0.2",
+  "name": "zotero-ai-bridge",
+  "display_name": "Zotero AI Bridge",
+  "version": "0.1.0",
+  "description": "Read-only access to your local Zotero library through the Zotero AI Bridge plugin (stdio relay to 127.0.0.1).",
+  "long_description": "Relays MCP messages between Claude Desktop and the Zotero AI Bridge plugin running inside Zotero 11 on this computer (http://127.0.0.1:<port>/bridge/mcp). The relay is a child process of Claude Desktop: it opens no listening port and only ever connects to 127.0.0.1. All 18 tools are read-only. Nothing about the current Zotero selection is attached to messages automatically; the model calls get_current_context when you refer to the open or selected paper.",
+  "author": { "name": "Zotero AI Bridge contributors" },
+  "license": "MIT",
+  "keywords": ["zotero", "research", "citations", "pdf", "mcp"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/zotero-relay.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/zotero-relay.js", "--port", "${user_config.port}"]
+    }
+  },
+  "user_config": {
+    "port": {
+      "type": "number",
+      "title": "Zotero HTTP port",
+      "description": "Port of Zotero's built-in HTTP server, as shown on the Zotero AI Bridge settings page. The host is always 127.0.0.1.",
+      "default": 23119,
+      "min": 1,
+      "max": 65535,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["win32", "darwin", "linux"],
+    "runtimes": { "node": ">=18.0.0" }
+  }
+}

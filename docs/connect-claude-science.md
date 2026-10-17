@@ -27,6 +27,8 @@ Codex 和 Claude Code 通过 Hook 在每轮消息前自动附加 Zotero 快照�
 - 不调用 `capture_prompt_context`（它只供 Hook 使用）。
 - 读取 PDF：`get_attachment_path` 取得本地路径，再用客户端自己的文件读取能力打开；客户端无法读取本地文件时如实说明。
 
+Claude 桌面应用（聊天 / Cowork）只接受 stdio 命令，经中继连接，见 [install-claude-desktop.md](install-claude-desktop.md)；它同样没有 Hook，使用同一个无 Hook 技能。
+
 手动验收步骤见 [tests/clients/generic-no-hook/README.md](../tests/clients/generic-no-hook/README.md)。
 
 ## 2. Claude Science：不兼容（已实测）
@@ -40,13 +42,14 @@ Codex 和 Claude Code 通过 Hook 在每轮消息前自动附加 Zotero 快照�
 1. 自定义远程连接器的 URL 必须是**公网 https 地址**：程序中有 `safeFetch: https-only` 与 `safeFetch: non-public host rejected`
    两个拒绝分支，提示文字为 “Remote MCP servers must be reachable at a public https URL”。`http://127.0.0.1` 两条都不满足。
 2. 它的沙箱出站代理拦截过本机端口：启动日志 `%LOCALAPPDATA%\ClaudeScience\desktop-launch.log` 中有
-   `[proxy] denied 127.0.0.1:23119 (blocked-port) via HTTP`。本地（stdio）连接器是否同样被拦截**未验证**（它也不是本方案的接入方式）。
+   `[proxy] denied 127.0.0.1:23119 (blocked-port) via HTTP`。本地（stdio）连接器是否同样被拦截**未验证**，所以 Claude 桌面应用使用的 stdio 中继（[install-claude-desktop.md](install-claude-desktop.md)）也不作为 Claude Science 的接入方式。
 3. Claude Science 文档中没有 Hook 或插件机制，无法做到每轮自动附加 Zotero 快照。
 
 **交付内容**：只有无 Hook 技能（`outputs/claude-science-zotero-skill/`）和复测说明。
 
-**不提供、也不建议**：公网隧道、端口转发、反向代理、本地中继进程，或修改 Claude Science 的沙箱 / 代理规则。
-桥接没有身份验证，这些做法会把整个文献库暴露出去，突破“本机可访问、只读”的安全边界。
+**不提供、也不建议**：公网隧道、端口转发、反向代理、监听端口的本地中继（或为绕过沙箱而运行的转发程序），或修改 Claude Science 的沙箱 / 代理规则。
+桥接没有身份验证，这些做法会把整个文献库暴露出去，突破“本机可访问、只读”的安全边界。Claude 桌面应用的 stdio 中继是客户端的
+子进程，只通过管道通信、不监听端口，不在此列（[architecture.md](architecture.md) 决策 22）。
 
 **复测**：Claude Science 更新后，按 [integrations/claude-science/README.md](../integrations/claude-science/README.md) 的
 “如何复测”逐步操作（包括原计划要求实测的三项：回环可达性、是否发送 `Origin` 请求头或浏览器 User-Agent、能否接受 JSON-only 响应），

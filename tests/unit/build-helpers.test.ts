@@ -7,12 +7,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { bundleClassicScript, bundleForInspection } from "../../scripts/lib/bundle.js";
+import { bundleClassicScript, bundleForInspection, bundleNodeScript } from "../../scripts/lib/bundle.js";
 import {
   type FileMap,
   bundleContractProblems,
   claudeCodePackageChecks,
+  claudeDesktopPackageChecks,
   codexPackageChecks,
+  desktopManifestProblems,
   endpointInitProblems,
   endpointRegistrationProblems,
   ftlMessageIds,
@@ -46,6 +48,8 @@ import {
   SECRET_RULES,
   forbiddenFileName,
   homeDirectoryRules,
+  nodeRequireProblems,
+  relayBundleProblems,
   scanBundle,
   scanContent,
 } from "../../scripts/lib/scan.js";
@@ -906,6 +910,77 @@ describe("esbuild bundling", () => {
     assert.match(twoArgs, /init\.length is 2/);
     assert.match(twoArgs, /supportedMethods lacks GET, PUT, PATCH, DELETE/);
     assert.match(await check("default.ts"), /init\.length is 0/);
+  });
+});
+
+describe("Claude Desktop extension", () => {
+  const RELAY_OK = 'const http = require("node:http");\nhttp.request({ host: "127.0.0.1", port: 23119 });\nconst v = "0.1.0";\n';
+  const manifest = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+    manifest_version: "0.2",
+    name: "zotero-ai-bridge",
+    display_name: "Zotero AI Bridge",
+    version: "0.1.0",
+    description: "Read-only Zotero.",
+    author: { name: "Contributors" },
+    server: {
+      type: "node",
+      entry_point: "server/zotero-relay.js",
+      mcp_config: { command: "node", args: ["${__dirname}/server/zotero-relay.js", "--port", "${user_config.port}"] },
+    },
+    user_config: { port: { type: "number", default: 23119, min: 1, max: 65535, required: false } },
+    ...overrides,
+  });
+  const desktopFiles = (overrides: Record<string, string | object> = {}): FileMap =>
+    fileMap({ "manifest.json": manifest(), "server/zotero-relay.js": RELAY_OK, "README.md": "# 说明\n", ...overrides });
+
+  it("accepts a well-formed package", () => {
+    assert.deepEqual(failures(claudeDesktopPackageChecks(desktopFiles(), "0.1.0")), []);
+  });
+
+  it("rejects host arguments, extra environment, wrong entry points and a required or unbounded port", () => {
+    const problems = (m: Record<string, unknown>): string => desktopManifestProblems(m, desktopFiles(), "0.1.0").join("\n");
+    const server = (mcpConfig: Record<string, unknown>) => ({ server: { type: "node", entry_point: "server/zotero-relay.js", mcp_config: mcpConfig } });
+    assert.match(
+      problems(manifest(server({ command: "node", args: ["${__dirname}/server/zotero-relay.js", "--port", "${user_config.port}", "--host", "0.0.0.0"] }))),
+      /mcp_config\.args must be/,
+    );
+    assert.match(
+      problems(manifest(server({ command: "node", args: ["${__dirname}/server/zotero-relay.js", "--port", "${user_config.port}"], env: { X: "1" } }))),
+      /mcp_config\.env must not be set/,
+    );
+    assert.match(problems(manifest({ server: { type: "python", entry_point: "x.py", mcp_config: {} } })), /server\.type must be "node"[\s\S]*entry_point/);
+    assert.match(problems(manifest({ user_config: { port: { type: "string", default: 1, required: true } } })), /type must be "number"[\s\S]*default must be 23119[\s\S]*1-65535[\s\S]*optional/);
+    assert.match(problems(manifest({ user_config: { port: {}, host: {} } })), /exactly "port"/);
+    assert.match(problems(manifest({ version: "0.0.9" })), /version must be 0\.1\.0/);
+  });
+
+  it("flags extra files and relay bundles that listen, set Origin, require packages or lack the loopback target", () => {
+    assert.match(failures(claudeDesktopPackageChecks(desktopFiles({ "icon.png": "x" }), "0.1.0")).join("\n"), /unexpected icon\.png/);
+    assert.deepEqual(relayBundleProblems(RELAY_OK), []);
+    assert.match(relayBundleProblems(`${RELAY_OK}http.createServer(() => {});`).join(), /listening socket/);
+    assert.match(relayBundleProblems(`${RELAY_OK}server.listen(0);`).join(), /listening socket/);
+    assert.match(relayBundleProblems(`${RELAY_OK}headers = { "Origin": "x" };`).join(), /Origin/);
+    assert.match(relayBundleProblems(`${RELAY_OK}require("undici");`).join(), /undici.*not a node: built-in/);
+    assert.match(relayBundleProblems('require("node:http").request({ host: "localhost" });').join(), /127\.0\.0\.1/);
+    assert.deepEqual(nodeRequireProblems('require("node:fs"); require(name);'), ["dynamic require()"]);
+  });
+
+  it("bundles the relay as one CommonJS file with the version injected and refuses package imports", async () => {
+    const root = tmpDir("bundle-relay");
+    writeTree(root, {
+      "main.ts": 'import http from "node:http";\ndeclare const __RELAY_VERSION__: string;\nconsole.log(__RELAY_VERSION__, typeof http.request);\n',
+      "dep.ts": 'import x from "some-package";\nconsole.log(x);\n',
+    });
+    const code = await bundleNodeScript(root, "main.ts", "node18", "1.2.3");
+    assert.match(code, /require\("node:http"\)/);
+    assert.ok(code.includes('"1.2.3"'));
+    assert.deepEqual(nodeRequireProblems(code), []);
+    await assert.rejects(bundleNodeScript(root, "dep.ts", "node18", "1.2.3"), /some-package is not a node: built-in/);
+  });
+
+  it("the real relay sources bundle cleanly and pass the shipped-bundle checks", async () => {
+    const code = await bundleNodeScript(REPO_ROOT, "packages/claude-desktop/src/main.ts", "node18", "0.1.0");
+    assert.deepEqual(relayBundleProblems(code), []);
   });
 });
 

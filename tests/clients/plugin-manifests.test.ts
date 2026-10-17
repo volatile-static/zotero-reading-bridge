@@ -318,6 +318,47 @@ describe("manual configuration examples", () => {
   });
 });
 
+describe("Claude Desktop extension (packages/claude-desktop)", () => {
+  const manifest = readJson("packages/claude-desktop/manifest.json");
+
+  it("manifest matches the package version and launches the relay with only a port", () => {
+    assert.equal(manifest.name, PLUGIN_NAME);
+    assert.equal(manifest.version, PACKAGE_VERSION);
+    assert.equal(manifest.server.type, "node");
+    assert.equal(manifest.server.entry_point, "server/zotero-relay.js");
+    assert.deepEqual(manifest.server.mcp_config, {
+      command: "node",
+      args: ["${__dirname}/server/zotero-relay.js", "--port", "${user_config.port}"],
+    });
+    assert.deepEqual(sortedKeys(manifest.user_config), ["port"]);
+    assert.equal(manifest.user_config.port.default, 23119);
+  });
+
+  it("ships a Chinese README and no prebuilt relay (the build bundles src/)", () => {
+    assert.match(readText("packages/claude-desktop/README.md"), /[一-鿿]/);
+    assert.equal(existsSync(repoPath("packages/claude-desktop/server/zotero-relay.js")), false);
+  });
+
+  it("install doc's claude_desktop_config.json example runs the relay with node, a port and nothing else", () => {
+    const doc = readText("docs/install-claude-desktop.md");
+    const block = /```json\r?\n\s*(\{[\s\S]*?"mcpServers"[\s\S]*?\})\s*\r?\n\s*```/.exec(doc);
+    assert.ok(block?.[1], "docs/install-claude-desktop.md must contain the claude_desktop_config.json example");
+    const config = JSON.parse(block[1]);
+    assert.deepEqual(sortedKeys(config.mcpServers), [CLIENT_SERVER_NAMES.claudeDesktopManual]);
+    const server = config.mcpServers[CLIENT_SERVER_NAMES.claudeDesktopManual];
+    assert.deepEqual(sortedKeys(server), ["args", "command"]);
+    assert.equal(server.command, "node");
+    assert.match(server.args[0], /[\\/]server[\\/]zotero-relay\.js$/);
+    assert.deepEqual(server.args.slice(1), ["--port", "23119"]);
+  });
+
+  it("docs link the Claude Desktop guide and the acceptance checklist has its section", () => {
+    assert.ok(readText("README.md").includes("docs/install-claude-desktop.md"));
+    assert.match(readText("docs/acceptance.md"), /^## 17\. Claude 桌面应用/m);
+    assert.match(readText("docs/architecture.md"), /^22\. \*\*Claude 桌面应用经 stdio 子进程中继接入/m);
+  });
+});
+
 describe("acceptance checklist (docs/acceptance.md)", () => {
   const md = readText("docs/acceptance.md");
   /** Every acceptance area of the original plan, as the section headings name them. */

@@ -6,6 +6,7 @@
  * Opens every archive with yauzl and checks structure, manifests, client hook wiring, bundle shape,
  * secrets and machine paths, then prints a PASS/FAIL table. Exit code 1 on any failure.
  */
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -13,6 +14,7 @@ import {
   type CheckResult,
   type FileMap,
   claudeCodePackageChecks,
+  claudeDesktopPackageChecks,
   codexPackageChecks,
   readText,
   runCheck,
@@ -31,6 +33,7 @@ import {
 } from "./lib/files.js";
 import { findIncludeMarkers } from "./lib/includes.js";
 import {
+  DESKTOP_RELAY_OUT,
   OUTPUTS_DIR,
   OUTPUT_NAMES,
   PACKAGE_JSON,
@@ -64,7 +67,13 @@ interface PackageContent {
   files: FileMap;
 }
 
-const ARCHIVES = [OUTPUT_NAMES.xpi, OUTPUT_NAMES.codex, OUTPUT_NAMES.claudeCode, OUTPUT_NAMES.source] as const;
+const ARCHIVES = [
+  OUTPUT_NAMES.xpi,
+  OUTPUT_NAMES.codex,
+  OUTPUT_NAMES.claudeCode,
+  OUTPUT_NAMES.claudeDesktop,
+  OUTPUT_NAMES.source,
+] as const;
 const MAX_LISTED = 12;
 
 function summarize(problems: readonly string[]): string[] {
@@ -180,6 +189,60 @@ function contentScans(contents: readonly PackageContent[], homeDir: string): Ver
   ];
 }
 
+interface ProcessRun {
+  code: number | null;
+  stdout: string;
+}
+
+function runNode(script: string, args: readonly string[], stdin: string): Promise<ProcessRun> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [script, ...args], { shell: false, windowsHide: true, stdio: ["pipe", "pipe", "ignore"] });
+    const chunks: Buffer[] = [];
+    const timer = setTimeout(() => child.kill(), 15_000);
+    child.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
+    child.on("error", reject);
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve({ code, stdout: Buffer.concat(chunks).toString("utf8") });
+    });
+    child.stdin.end(stdin);
+  });
+}
+
+/**
+ * Run the shipped relay with this Node: a non-loopback --host must exit with code 2 and print nothing, and a request
+ * to a port where nothing listens (1) must come back as one JSON-RPC error line for the same id.
+ */
+async function relaySmokeCheck(relay: Buffer): Promise<CheckResult> {
+  const name = `${DESKTOP_RELAY_OUT} runs: rejects --host 0.0.0.0, answers unreachable Zotero with a JSON-RPC error`;
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "zotero-relay-verify-"));
+  try {
+    const script = path.join(dir, "zotero-relay.js");
+    fs.writeFileSync(script, relay);
+    const problems: string[] = [];
+    const rejected = await runNode(script, ["--host", "0.0.0.0"], "");
+    if (rejected.code !== 2 || rejected.stdout !== "") problems.push(`--host 0.0.0.0: exit ${rejected.code}, stdout ${JSON.stringify(rejected.stdout)}`);
+    const request = { jsonrpc: "2.0", id: 7, method: "initialize", params: { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "verify", version: "0" } } };
+    const unreachable = await runNode(script, ["--port", "1"], `${JSON.stringify(request)}\n`);
+    const lines = unreachable.stdout.split("\n").filter(Boolean);
+    let reply: unknown = null;
+    try {
+      reply = lines.length === 1 ? JSON.parse(lines[0] ?? "") : null;
+    } catch {
+      reply = null;
+    }
+    const error = isRecord(reply) ? reply["error"] : undefined;
+    if (unreachable.code !== 0 || !isRecord(reply) || reply["id"] !== 7 || !isRecord(error) || error["code"] !== -32000) {
+      problems.push(`port 1: exit ${unreachable.code}, stdout ${JSON.stringify(unreachable.stdout.slice(0, 200))}`);
+    }
+    return problems.length === 0 ? { name, ok: true } : { name, ok: false, detail: problems.join("; ") };
+  } catch (error) {
+    return { name, ok: false, detail: errorMessage(error) };
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export async function verifyPackage(options: VerifyOptions): Promise<VerifyRow[]> {
   const root = path.resolve(options.root);
   const outputsDir = path.join(root, OUTPUTS_DIR);
@@ -214,6 +277,13 @@ export async function verifyPackage(options: VerifyOptions): Promise<VerifyRow[]
   if (claude) {
     contents.push({ label: OUTPUT_NAMES.claudeCode, files: claude });
     add(OUTPUT_NAMES.claudeCode, claudeCodePackageChecks(claude, version));
+  }
+  const desktop = await readArchive(outputsDir, OUTPUT_NAMES.claudeDesktop, rows);
+  if (desktop) {
+    contents.push({ label: OUTPUT_NAMES.claudeDesktop, files: desktop });
+    add(OUTPUT_NAMES.claudeDesktop, claudeDesktopPackageChecks(desktop, version));
+    const relay = desktop.get(DESKTOP_RELAY_OUT);
+    if (relay) rows.push({ group: OUTPUT_NAMES.claudeDesktop, ...(await relaySmokeCheck(relay)) });
   }
   const science = readDirectory(outputsDir, OUTPUT_NAMES.scienceDir);
   if (science) {

@@ -6,7 +6,7 @@
  */
 import * as esbuild from "esbuild";
 import type { BundleSpec } from "./layout.js";
-import { scanBundle } from "./scan.js";
+import { nodeRequireProblems, scanBundle } from "./scan.js";
 
 function baseOptions(root: string, entry: string): esbuild.BuildOptions {
   return {
@@ -80,6 +80,52 @@ export async function bundleClassicScript(root: string, spec: BundleSpec): Promi
   if (violations.length > 0) {
     throw new Error(`${spec.entry} bundle cannot run as a Zotero subscript: ${violations.join(", ")}`);
   }
+  return code;
+}
+
+/**
+ * Bundle a Node command-line program (the Claude Desktop relay) into one self-contained CommonJS file: CommonJS so that
+ * `node <file>.js` runs it without a package.json beside it, Node built-ins only (anything else is an error, because the
+ * .mcpb ships no node_modules). `version` replaces the `__RELAY_VERSION__` identifier.
+ */
+export async function bundleNodeScript(root: string, entry: string, target: string, version: string): Promise<string> {
+  const code = singleOutput(
+    await build(
+      {
+        absWorkingDir: root,
+        entryPoints: [entry],
+        bundle: true,
+        platform: "node",
+        format: "cjs",
+        target,
+        charset: "utf8",
+        legalComments: "inline",
+        minify: false,
+        sourcemap: false,
+        write: false,
+        logLevel: "silent",
+        define: { __RELAY_VERSION__: JSON.stringify(version) },
+        // Resolving a bare package would mean shipping node_modules; make it an error instead of a silent external.
+        plugins: [
+          {
+            name: "builtins-only",
+            setup(pluginBuild) {
+              pluginBuild.onResolve({ filter: /^[^./]/ }, (args) => {
+                if (args.kind === "entry-point") return undefined;
+                return args.path.startsWith("node:")
+                  ? { path: args.path, external: true }
+                  : { errors: [{ text: `${args.path} is not a node: built-in; the relay must have no dependencies` }] };
+              });
+            },
+          },
+        ],
+      },
+      entry,
+    ),
+    entry,
+  );
+  const foreign = nodeRequireProblems(code);
+  if (foreign.length > 0) throw new Error(`${entry} bundle: ${foreign.join(", ")}`);
   return code;
 }
 

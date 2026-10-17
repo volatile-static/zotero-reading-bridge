@@ -14,6 +14,8 @@ import { CLIENT_SERVER_NAMES, PLUGIN_NAME } from "../../shared/types/hook.js";
 import type { ToolName } from "../../shared/types/tool-names.js";
 import { errorMessage } from "./cli.js";
 import {
+  DESKTOP_RELAY_OUT,
+  DESKTOP_REQUIRED_FILES,
   ENDPOINT_METHODS,
   ENDPOINT_MODULE,
   MAIN_GLOBAL_NAME,
@@ -26,7 +28,7 @@ import {
   ZOTERO_BUNDLES,
 } from "./layout.js";
 import { isRecord, parseFrontmatter } from "./manifests.js";
-import { scanBundle } from "./scan.js";
+import { relayBundleProblems, scanBundle } from "./scan.js";
 import { createSandbox, inertStub, missingFunctions } from "./script-globals.js";
 
 export type FileMap = ReadonlyMap<string, Buffer>;
@@ -564,5 +566,70 @@ export function claudeCodePackageChecks(files: FileMap, version: string): CheckR
       ];
     }),
     runCheck(`${SKILL_FILE} front matter`, () => skillProblems(files)),
+  ];
+}
+
+const DESKTOP_RELAY_ARGS = ["${__dirname}/" + DESKTOP_RELAY_OUT, "--port", "${user_config.port}"];
+
+/**
+ * The .mcpb manifest: a node server whose entry point is the shipped relay, launched with exactly
+ * `node ${__dirname}/<relay> --port ${user_config.port}` (no host argument, no environment: the relay's target is
+ * fixed to 127.0.0.1), and an optional numeric port defaulting to Zotero's.
+ */
+export function desktopManifestProblems(manifest: Record<string, unknown>, files: FileMap, version: string): string[] {
+  const problems: string[] = [];
+  if (typeof manifest["manifest_version"] !== "string") problems.push("manifest_version must be a string");
+  if (manifest["name"] !== PLUGIN_NAME) problems.push(`name must be "${PLUGIN_NAME}"`);
+  if (manifest["version"] !== version) problems.push(`version must be ${version} (got ${JSON.stringify(manifest["version"])})`);
+  for (const key of ["display_name", "description"]) {
+    if (typeof manifest[key] !== "string" || !manifest[key]) problems.push(`${key} must be a non-empty string`);
+  }
+  const author = manifest["author"];
+  if (!isRecord(author) || typeof author["name"] !== "string" || !author["name"]) problems.push("author.name is required");
+  const server = manifest["server"];
+  if (!isRecord(server)) return [...problems, "server is missing"];
+  if (server["type"] !== "node") problems.push(`server.type must be "node"`);
+  if (server["entry_point"] !== DESKTOP_RELAY_OUT) problems.push(`server.entry_point must be ${DESKTOP_RELAY_OUT}`);
+  else if (!files.has(DESKTOP_RELAY_OUT)) problems.push(`server.entry_point ${DESKTOP_RELAY_OUT} is not in the package`);
+  const config = server["mcp_config"];
+  if (!isRecord(config)) return [...problems, "server.mcp_config is missing"];
+  if (config["command"] !== "node") problems.push(`server.mcp_config.command must be "node"`);
+  const args = config["args"];
+  if (!Array.isArray(args) || JSON.stringify(args) !== JSON.stringify(DESKTOP_RELAY_ARGS)) {
+    problems.push(`server.mcp_config.args must be ${JSON.stringify(DESKTOP_RELAY_ARGS)}`);
+  }
+  for (const key of Object.keys(config)) {
+    if (key !== "command" && key !== "args") problems.push(`server.mcp_config.${key} must not be set`);
+  }
+  const userConfig = manifest["user_config"];
+  const keys = isRecord(userConfig) ? Object.keys(userConfig) : [];
+  if (keys.join(",") !== "port") return [...problems, `user_config must declare exactly "port" (got [${keys.join(", ")}])`];
+  const port = (userConfig as Record<string, unknown>)["port"];
+  if (!isRecord(port)) return [...problems, "user_config.port must be an object"];
+  if (port["type"] !== "number") problems.push(`user_config.port.type must be "number"`);
+  if (port["default"] !== DEFAULT_ZOTERO_PORT) problems.push(`user_config.port.default must be ${DEFAULT_ZOTERO_PORT}`);
+  if (port["min"] !== 1 || port["max"] !== 65535) problems.push("user_config.port must be limited to 1-65535");
+  if (port["required"] === true) problems.push("user_config.port must be optional");
+  return problems;
+}
+
+export function claudeDesktopPackageChecks(files: FileMap, version: string): CheckResult[] {
+  return [
+    runCheck(`exactly ${DESKTOP_REQUIRED_FILES.join(", ")}`, () => {
+      const expected = new Set<string>(DESKTOP_REQUIRED_FILES);
+      return [
+        ...DESKTOP_REQUIRED_FILES.filter((name) => !files.has(name)).map((name) => `missing ${name}`),
+        ...[...files.keys()].filter((name) => !expected.has(name)).map((name) => `unexpected ${name}`),
+      ];
+    }),
+    runCheck("manifest.json: node server, relay args, port option", () =>
+      desktopManifestProblems(readJsonObject(files, "manifest.json"), files, version),
+    ),
+    runCheck(`${DESKTOP_RELAY_OUT}: node: built-ins only, no listening socket, no Origin, 127.0.0.1 target`, () =>
+      relayBundleProblems(readText(files, DESKTOP_RELAY_OUT)),
+    ),
+    runCheck(`${DESKTOP_RELAY_OUT} reports version ${version}`, () =>
+      readText(files, DESKTOP_RELAY_OUT).includes(JSON.stringify(version)) ? [] : ["version string not found in the bundle"],
+    ),
   ];
 }

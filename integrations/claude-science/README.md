@@ -2,7 +2,7 @@
 
 > 连接状态：**不兼容（已实测）**：Claude Science 0.1.63（Windows 11，2026-10-16）添加 `http://127.0.0.1:23119/bridge/mcp`
 > 远程连接器时报错 `safeFetch: https-only (got http://)`，连接器未被添加（`docs/acceptance.md` G-4）。
-> 本目录只提供一个无 Hook 的技能文件和复测方法，不提供任何中继、隧道或放宽安全规则的办法。
+> 本目录只提供一个无 Hook 的技能文件和复测方法，不提供隧道、监听端口的中继或放宽安全规则的办法。
 
 ## 内容
 
@@ -20,10 +20,10 @@ Claude Science 必须能以 MCP Streamable HTTP 访问 `http://127.0.0.1:23119/b
 第 1 条已在 0.1.63 上实测证实（添加连接器时报 `safeFetch: https-only`）。以下结论最初来自本机安装的 Claude Science 0.1.62（`%LOCALAPPDATA%\Programs\ClaudeScience`，`install.json` 版本 0.1.62）的程序字符串和启动日志，没有做过真实连接：
 
 1. **远程连接器只接受公网 https 地址。** 添加自定义连接器时，URL 会经过 `safeFetch` 检查，程序中有 `safeFetch: https-only` 和 `safeFetch: non-public host rejected` 两个拒绝分支，并附带提示“Remote MCP servers must be reachable at a public https URL”。`http://127.0.0.1:...` 同时违反这两条。
-2. **沙箱代理拦截过 Zotero 端口。** 本机启动日志 `%LOCALAPPDATA%\ClaudeScience\desktop-launch.log` 中出现过 `[proxy] denied 127.0.0.1:23119 (blocked-port) via HTTP`，说明沙箱的出站代理曾拦截访问 23119 端口的请求。本地（stdio）连接器是否运行在同一个沙箱中、是否同样被拦截、能否通过授权放行，都**未验证**；本地 stdio 连接器也不是本方案的接入方式。
+2. **沙箱代理拦截过 Zotero 端口。** 本机启动日志 `%LOCALAPPDATA%\ClaudeScience\desktop-launch.log` 中出现过 `[proxy] denied 127.0.0.1:23119 (blocked-port) via HTTP`，说明沙箱的出站代理曾拦截访问 23119 端口的请求。本地（stdio）连接器是否运行在同一个沙箱中、是否同样被拦截、能否通过授权放行，都**未验证**，因此本方案不把 Claude 桌面应用的 stdio 中继作为 Claude Science 的接入方式。
 3. **Claude Science 文档中没有 Hook 或插件机制**，因此无法像 Codex / Claude Code 那样每轮自动附加 Zotero 快照，只能使用本目录的无 Hook 技能。
 
-本项目**不会**提供以下变通办法，也不建议自行尝试：公网隧道或端口转发（会把整个文献库无鉴权地暴露出去）、本地中继进程、修改 Claude Science 的沙箱或代理规则。这些都会突破“本机可访问、只读”的安全边界。
+本项目**不会**提供以下变通办法，也不建议自行尝试：公网隧道或端口转发（会把整个文献库无鉴权地暴露出去）、监听端口的本地中继（把桥接转发到新的地址或端口，或为绕过沙箱而运行的转发程序）、修改 Claude Science 的沙箱或代理规则（Claude 桌面应用使用的 stdio 中继是客户端的子进程、不监听端口，不在此列，见 `docs/install-claude-desktop.md`；它在 Claude Science 中是否可用未验证）。这些都会突破“本机可访问、只读”的安全边界。
 
 ## 如何复测（Claude Science 更新后）
 

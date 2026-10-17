@@ -126,3 +126,26 @@ const BUNDLE_RULES: readonly { description: string; re: RegExp }[] = [
 export function scanBundle(code: string): string[] {
   return BUNDLE_RULES.filter((rule) => rule.re.test(code)).map((rule) => rule.description);
 }
+
+/** require() targets of a Node bundle that are not `node:` built-ins (the bundle must be self-contained). */
+export function nodeRequireProblems(code: string): string[] {
+  const problems: string[] = [];
+  for (const match of code.matchAll(/(?<![\w$.])require\s*\(\s*(["'`])([^"'`]*)\1\s*\)/g)) {
+    if (!(match[2] ?? "").startsWith("node:")) problems.push(`require(${JSON.stringify(match[2])}) is not a node: built-in`);
+  }
+  if (/(?<![\w$.])require\s*\(\s*[^"'`\s)]/.test(code)) problems.push("dynamic require()");
+  return problems;
+}
+
+/**
+ * The Claude Desktop relay must stay a pipe-to-loopback client (architecture.md, design decision 22): it may not open a
+ * listening socket, may not set an Origin header, and must name 127.0.0.1 as its target.
+ */
+export function relayBundleProblems(code: string): string[] {
+  const problems = nodeRequireProblems(code);
+  if (/\bcreateServer\s*\(|\.listen\s*\(/.test(code)) problems.push("opens a listening socket (createServer/listen)");
+  if (/["'`]origin["'`]\s*[:,\]]/i.test(code)) problems.push("sets an Origin header");
+  if (!code.includes('"127.0.0.1"')) problems.push('does not name "127.0.0.1" as its target');
+  if (/["'`]0\.0\.0\.0["'`]/.test(code)) problems.push("mentions 0.0.0.0");
+  return problems;
+}

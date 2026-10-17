@@ -14,6 +14,7 @@ export const TYPECHECK_PROJECTS = [
   "scripts/tsconfig.json",
   "tests/tsconfig.json",
   "tests/zotero/seed-plugin/tsconfig.json",
+  "packages/claude-desktop/tsconfig.json",
 ] as const;
 export const TSC_ENTRY = "node_modules/typescript/bin/tsc";
 
@@ -79,6 +80,7 @@ export const OUTPUT_NAMES = {
   xpi: `${BRIDGE_NAME}.xpi`,
   codex: `${BRIDGE_NAME}-codex.zip`,
   claudeCode: `${BRIDGE_NAME}-claude-code.zip`,
+  claudeDesktop: `${BRIDGE_NAME}-claude-desktop.mcpb`,
   scienceDir: "claude-science-zotero-skill",
   source: "source.zip",
   buildInfo: "BUILD-INFO.json",
@@ -104,6 +106,19 @@ export const CLIENT_PACKAGES: readonly ClientPackageSpec[] = [
 
 /** Marketplace manifests whose plugin entries may carry a `version` that must match the plugin's. */
 export const MARKETPLACE_MANIFESTS = [".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"] as const;
+
+/**
+ * Claude Desktop extension (.mcpb): manifest.json with the version injected, the relay bundled from TypeScript into one
+ * CommonJS file, and the remaining non-TypeScript files (README.md) copied as they are.
+ */
+export const DESKTOP_SOURCE_DIR = "packages/claude-desktop";
+export const DESKTOP_MANIFEST = "manifest.json";
+export const DESKTOP_RELAY_ENTRY = "packages/claude-desktop/src/main.ts";
+/** Path of the bundled relay inside the .mcpb (manifest server.entry_point). */
+export const DESKTOP_RELAY_OUT = "server/zotero-relay.js";
+export const DESKTOP_REQUIRED_FILES = [DESKTOP_MANIFEST, DESKTOP_RELAY_OUT, "README.md"] as const;
+/** Oldest Node the relay bundle targets (manifest compatibility.runtimes.node). */
+export const DESKTOP_NODE_TARGET = "node18";
 
 export const SCIENCE_SOURCE_DIR = "integrations/claude-science";
 export const SKILL_FILE = "skills/zotero/SKILL.md";

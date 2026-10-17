@@ -719,7 +719,7 @@ function xpiFiles(overrides: Record<string, string | object> = {}): FileMap {
       icons: { "48": "content/icons/icon.svg" },
       applications: {
         zotero: {
-          id: "zotero-reading-bridge@zotero-reading-bridge.local",
+          id: "zotero-reading-bridge@volatile.static",
           update_url: "https://zotero-reading-bridge.invalid/update.json",
           strict_min_version: "10.999",
           strict_max_version: "11.*",

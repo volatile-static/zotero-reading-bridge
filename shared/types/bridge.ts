@@ -6,7 +6,7 @@ export const BRIDGE_NAME = "zotero-reading-bridge";
 export const BRIDGE_TITLE = "Zotero Reading Bridge";
 
 /** Zotero add-on identity for Zotero Reading Bridge. */
-export const ZOTERO_ADDON_ID = "zotero-reading-bridge@zotero-reading-bridge.local";
+export const ZOTERO_ADDON_ID = "zotero-reading-bridge@volatile.static";
 /** Fluent ids share Zotero's localization namespace and use the project prefix. */
 export const LOCALIZATION_PREFIX = `${BRIDGE_NAME}-`;
 

@@ -16,10 +16,10 @@ zotero-reading-bridge-pref-copy-address =
 zotero-reading-bridge-pref-port-note = The address always shows the port Zotero is actually using. Changing Zotero's HTTP server port requires restarting Zotero and updating client configurations.
 
 zotero-reading-bridge-pref-clients-heading = Connect AI Clients
-zotero-reading-bridge-pref-codex-description = Codex desktop: drag zotero-reading-bridge-desktop.zip into Plugins → Add → New Plugin.
+zotero-reading-bridge-pref-codex-description = Codex desktop: drag zotero-reading-bridge-codex.zip into Plugins → Add → New Plugin.
 zotero-reading-bridge-pref-claude-description = Claude desktop: drag zotero-reading-bridge-claude-desktop.mcpb into Settings → Extensions.
 zotero-reading-bridge-pref-copied = Copied to the clipboard.
 
 zotero-reading-bridge-pref-security-heading = Security
-zotero-reading-bridge-pref-security-note = The endpoint only listens on this computer (127.0.0.1) and is read-only: it never changes your library. It has no password, so while it is on, any program running on this computer can read your Zotero library, notes and attachment file paths. AI clients cannot verify that they are talking to Zotero either: while Zotero is not running, another program or user on this computer can take its port and feed instructions into every message through the client hooks. On a shared computer, do not install the Codex or Claude Code client plugins. To turn the endpoint off, disable Zotero Reading Bridge in Tools → Plugins.
+zotero-reading-bridge-pref-security-note = The endpoint only listens on this computer (127.0.0.1) and is read-only: it never changes your library. It has no password, so while it is on, any program running on this computer can read your Zotero library, notes and attachment file paths. AI clients cannot verify that they are talking to Zotero either: while Zotero is not running, another program or user on this computer can take its port and feed instructions into every message through the client hooks. On a shared computer, do not install the Codex or Claude Desktop client plugins. To turn the endpoint off, disable Zotero Reading Bridge in Tools → Plugins.
 zotero-reading-bridge-pref-debug-note = When Zotero's debug output logging is on, Zotero itself records incoming requests and, while tools run, the paths and file names of attachments, database query values (such as item URLs and search terms) and full-text search terms. Turn debug output off while using AI clients, and review or redact debug output before submitting it.

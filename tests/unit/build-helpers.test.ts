@@ -8,11 +8,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { bundleClassicScript, bundleForInspection, bundleNodeScript } from "../../scripts/lib/bundle.js";
-import { desktopPluginEntries } from "../../scripts/package-desktop-plugin.js";
 import {
   type FileMap,
   bundleContractProblems,
-  claudeCodePackageChecks,
   claudeDesktopPackageChecks,
   codexPackageChecks,
   desktopManifestProblems,
@@ -39,10 +37,12 @@ import {
 import { IncludeError, expandIncludes, findIncludeMarkers } from "../../scripts/lib/includes.js";
 import { MAIN_GLOBAL_NAME, ZIP_ENTRY_DATE } from "../../scripts/lib/layout.js";
 import {
-  injectMarketplaceVersion,
-  injectVersion,
+  type PackageMetadata,
+  injectMetadata,
   parseFrontmatter,
-  readPackageVersion,
+  portableCodexManifest,
+  portableMcpConfig,
+  readPackageMetadata,
 } from "../../scripts/lib/manifests.js";
 import {
   ABSOLUTE_PATH_RULES,
@@ -504,35 +504,51 @@ describe("content scanners", () => {
   });
 });
 
+const META: PackageMetadata = { name: "zotero-reading-bridge", version: "1.0.0", author: "a", license: "GPL-3.0-or-later", keywords: ["zotero"] };
+
 describe("manifest transforms", () => {
-  it("reads a SemVer package version", () => {
-    assert.equal(readPackageVersion('{"version":"1.2.3-beta.1"}'), "1.2.3-beta.1");
-    assert.throws(() => readPackageVersion('{"version":"1.2"}'), /SemVer/);
-    assert.throws(() => readPackageVersion("{}"), /SemVer/);
+  it("reads the shared metadata from package.json", () => {
+    const pkg = { name: "n", version: "1.2.3-beta.1", author: "a", license: "MIT", keywords: ["k"] };
+    assert.deepEqual(readPackageMetadata(JSON.stringify(pkg)), pkg);
+    assert.throws(() => readPackageMetadata(JSON.stringify({ ...pkg, version: "1.2" })), /SemVer/);
+    assert.throws(() => readPackageMetadata(JSON.stringify({ ...pkg, author: "" })), /"author"/);
+    assert.throws(() => readPackageMetadata(JSON.stringify({ ...pkg, keywords: "k" })), /"keywords"/);
+    assert.throws(() => readPackageMetadata("[]"), /must be a JSON object/);
+    assert.throws(() => readPackageMetadata("{"), /package\.json: invalid JSON/);
   });
 
-  it("injects the version, keeps key order and reports the previous value", () => {
-    const { text, previous } = injectVersion('{"name":"x","version":"0.0.0","description":"d"}', "1.0.0", "m.json");
-    assert.equal(previous, "0.0.0");
-    assert.equal(text, '{\n  "name": "x",\n  "version": "1.0.0",\n  "description": "d"\n}\n');
-    assert.equal(JSON.parse(injectVersion('{"name":"x"}', "1.0.0", "m.json").text).version, "1.0.0");
-    assert.throws(() => injectVersion("[]", "1.0.0", "m.json"), /must be a JSON object/);
-    assert.throws(() => injectVersion("{", "1.0.0", "m.json"), /m\.json: invalid JSON/);
-  });
-
-  it("updates only marketplace entries that pin a version for this plugin", () => {
-    const source = JSON.stringify({
-      name: "m",
-      plugins: [
-        { name: "zotero-reading-bridge", source: "./", version: "0.0.1" },
-        { name: "other", version: "0.0.1" },
-      ],
+  it("fills the shared fields into client and Zotero manifests and refuses sources that set them", () => {
+    const client = injectMetadata('{"manifest_version":"0.2","description":"d"}', META, "client", "m.json");
+    assert.deepEqual(Object.keys(client), ["manifest_version", "name", "version", "description", "author", "license", "keywords"]);
+    assert.deepEqual(client["author"], { name: "a" });
+    assert.deepEqual(injectMetadata('{"name":"Zotero Reading Bridge"}', META, "zotero", "m.json"), {
+      name: "Zotero Reading Bridge",
+      version: "1.0.0",
+      author: "a",
     });
-    const updated = JSON.parse(injectMarketplaceVersion(source, "zotero-reading-bridge", "2.0.0", "m.json"));
-    assert.equal(updated.plugins[0].version, "2.0.0");
-    assert.equal(updated.plugins[1].version, "0.0.1");
-    const unpinned = JSON.stringify({ plugins: [{ name: "zotero-reading-bridge", source: "./" }] });
-    assert.equal(injectMarketplaceVersion(unpinned, "zotero-reading-bridge", "2.0.0", "m.json"), unpinned);
+    assert.throws(() => injectMetadata('{"version":"0.0.1"}', META, "client", "m.json"), /m\.json: version must not be set/);
+    assert.throws(() => injectMetadata('{"author":"x"}', META, "zotero", "m.json"), /author must not be set/);
+  });
+
+  it("derives the portable Codex manifest and MCP config", () => {
+    const codex = {
+      name: "n",
+      version: "1",
+      description: "d",
+      skills: "./skills/",
+      mcpServers: "./.mcp.json",
+      hooks: "./h.json",
+      requires_local_executor: true,
+      interface: { displayName: "D" },
+    };
+    assert.deepEqual(portableCodexManifest(codex), {
+      $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+      name: "n",
+      version: "1",
+      description: "d",
+      extensions: { "com.openai": { interface: { displayName: "D" }, requires_local_executor: true } },
+    });
+    assert.deepEqual(portableMcpConfig({ mcpServers: {} }), { $schema: "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json", mcpServers: {} });
   });
 
   it("parses SKILL.md front matter", () => {
@@ -561,101 +577,72 @@ describe("manifest transforms", () => {
 
 const HOOK_BASE = { type: "mcp_tool", tool: "capture_prompt_context", timeout: 5, statusMessage: "Reading Zotero context" };
 const SKILL_MD = "---\nname: zotero\ndescription: Read the Zotero library.\n---\n# Zotero\n";
-const MCP_URL = "http://127.0.0.1:23119/bridge/mcp";
+const RELAY_SERVER = { type: "stdio", command: "node", args: ["${PLUGIN_ROOT}/server/zotero-relay.js"], cwd: "${PLUGIN_ROOT}" };
+const CODEX_MANIFEST = injectMetadata(
+  JSON.stringify({ skills: "./skills/", mcpServers: "./.mcp.json", hooks: "./hooks/hooks.json", requires_local_executor: true }),
+  META,
+  "client",
+  "plugin.json",
+);
 
-function codexFiles(overrides: Record<string, string | object> = {}): FileMap {
-  return fileMap({
-    ".codex-plugin/plugin.json": {
-      name: "zotero-reading-bridge",
-      version: "1.0.0",
-      skills: "./skills/",
-      mcpServers: "./.mcp.json",
-      hooks: "./hooks/hooks.json",
-    },
-    ".mcp.json": { mcpServers: { zotero_bridge: { type: "http", url: MCP_URL, startup_timeout_sec: 10, tool_timeout_sec: 30 } } },
-    "hooks/hooks.json": {
-      description: "Zotero context",
-      hooks: {
-        UserPromptSubmit: [
-          {
-            hooks: [
-              { ...HOOK_BASE, server: "zotero_bridge", input: { client: "codex", session_id: "${session_id}", turn_id: "${turn_id}" } },
-            ],
-          },
-        ],
+function codexFiles(overrides: Record<string, string | object> = {}): Map<string, Buffer> {
+  const mcp = { mcpServers: { zotero_bridge: RELAY_SERVER } };
+  return new Map(
+    fileMap({
+      ".codex-plugin/plugin.json": CODEX_MANIFEST,
+      ".mcp.json": mcp,
+      "plugin.json": portableCodexManifest(CODEX_MANIFEST),
+      "mcp.json": portableMcpConfig(mcp),
+      "server/zotero-relay.js": "// relay",
+      "server/package.json": { type: "commonjs" },
+      "hooks/hooks.json": {
+        description: "Zotero context",
+        hooks: {
+          UserPromptSubmit: [
+            {
+              hooks: [
+                { ...HOOK_BASE, server: "zotero_bridge", input: { client: "codex", session_id: "${session_id}", turn_id: "${turn_id}" } },
+              ],
+            },
+          ],
+        },
       },
-    },
-    "skills/zotero/SKILL.md": SKILL_MD,
-    ...overrides,
-  });
-}
-
-function claudeFiles(overrides: Record<string, string | object> = {}): FileMap {
-  return fileMap({
-    ".claude-plugin/plugin.json": { name: "zotero-reading-bridge", version: "1.0.0", description: "d" },
-    ".mcp.json": { mcpServers: { zotero: { type: "http", url: MCP_URL } } },
-    "hooks/hooks.json": {
-      hooks: {
-        UserPromptSubmit: [
-          {
-            hooks: [
-              {
-                ...HOOK_BASE,
-                server: "plugin:zotero-reading-bridge:zotero",
-                input: { client: "claude-code", session_id: "${session_id}", prompt_id: "${prompt_id}" },
-              },
-            ],
-          },
-        ],
-      },
-    },
-    "skills/zotero/SKILL.md": SKILL_MD,
-    ...overrides,
-  });
+      "skills/zotero/SKILL.md": SKILL_MD,
+      ...overrides,
+    }),
+  );
 }
 
 const failures = (results: readonly { ok: boolean; name: string; detail?: string }[]): string[] =>
   results.filter((r) => !r.ok).map((r) => `${r.name}: ${r.detail ?? ""}`);
 
-describe("client plugin checks", () => {
-  it("assembles a desktop package and rejects a missing relay or desktop declaration", () => {
-    const source = codexFiles({
-      "plugin.json": {
-        $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-        name: "zotero-reading-bridge", version: "1.0.0", extensions: { "com.openai": {} },
-      },
-      ".agents/plugins/marketplace.json": {},
-    });
-    const relay = { name: "server/zotero-relay.js", data: Buffer.from("// shared relay") };
-    const entries = desktopPluginEntries([...source].map(([name, data]) => ({ name, data })), relay);
-    const files = new Map<string, Buffer>(entries.map(({ name, data }) => [name, Buffer.from(data)]));
-    assert.deepEqual(failures(codexPackageChecks(files, "1.0.0", true)), []);
-    assert.deepEqual(files.get(relay.name), relay.data);
-    files.delete(relay.name);
-    assert.match(failures(codexPackageChecks(files, "1.0.0", true)).join("\n"), /missing relay/);
-    files.set(relay.name, relay.data);
-    files.set("plugin.json", source.get("plugin.json")!);
-    assert.match(failures(codexPackageChecks(files, "1.0.0", true)).join("\n"), /desktop execution must be declared/);
-  });
-  it("accept well-formed Codex and Claude Code packages", () => {
-    assert.deepEqual(failures(codexPackageChecks(codexFiles(), "1.0.0")), []);
-    assert.deepEqual(failures(claudeCodePackageChecks(claudeFiles(), "1.0.0")), []);
+describe("Codex plugin checks", () => {
+  it("accept a well-formed package", () => {
+    assert.deepEqual(failures(codexPackageChecks(codexFiles(), META)), []);
   });
 
-  it("reject version drift, wrong server keys and Claude manifest component keys", () => {
-    assert.match(failures(codexPackageChecks(codexFiles(), "1.0.1")).join("\n"), /version must be 1\.0\.1/);
-    const wrongServer = codexFiles({ ".mcp.json": { mcpServers: { zotero: { type: "http", url: MCP_URL } } } });
-    assert.match(failures(codexPackageChecks(wrongServer, "1.0.0")).join("\n"), /exactly "zotero_bridge"/);
-    const relaxed = codexFiles({
-      ".mcp.json": { mcpServers: { zotero_bridge: { type: "http", url: MCP_URL, default_tools_approval_mode: "approve" } } },
-    });
-    assert.match(failures(codexPackageChecks(relaxed, "1.0.0")).join("\n"), /default_tools_approval_mode must not be set/);
-    const withHooksKey = claudeFiles({ ".claude-plugin/plugin.json": { name: "zotero-reading-bridge", version: "1.0.0", hooks: "./hooks/hooks.json" } });
-    assert.match(failures(claudeCodePackageChecks(withHooksKey, "1.0.0")).join("\n"), /must not declare "hooks"/);
-    const badPath = codexFiles({
-      ".codex-plugin/plugin.json": { name: "zotero-reading-bridge", version: "1.0.0", hooks: "hooks/hooks.json", skills: "./missing/" },
-    });
-    const detail = failures(codexPackageChecks(badPath, "1.0.0")).join("\n");
+  it("reject metadata drift, a missing relay, a remote executor and stale portable copies", () => {
+    assert.match(failures(codexPackageChecks(codexFiles(), { ...META, version: "1.0.1" })).join("\n"), /version must be 1\.0\.1/);
+    assert.match(failures(codexPackageChecks(codexFiles(), { ...META, license: "MIT" })).join("\n"), /license must be MIT/);
+    const noRelay = codexFiles();
+    noRelay.delete("server/zotero-relay.js");
+    assert.match(failures(codexPackageChecks(noRelay, META)).join("\n"), /missing server\/zotero-relay\.js/);
+    const stale = codexFiles({ "plugin.json": { name: "zotero-reading-bridge" } });
+    assert.match(failures(codexPackageChecks(stale, META)).join("\n"), /plugin\.json differs/);
+    const remote = codexFiles({ ".codex-plugin/plugin.json": { ...CODEX_MANIFEST, requires_local_executor: false } });
+    assert.match(failures(codexPackageChecks(remote, META)).join("\n"), /requires_local_executor must be true/);
+  });
+
+  it("reject other servers, HTTP transport, relaxed approvals and bad manifest paths", () => {
+    const mcp = (server: object, key = "zotero_bridge") => codexFiles({ ".mcp.json": { mcpServers: { [key]: server } } });
+    assert.match(failures(codexPackageChecks(mcp(RELAY_SERVER, "zotero"), META)).join("\n"), /exactly "zotero_bridge"/);
+    assert.match(failures(codexPackageChecks(mcp({ type: "http", url: "http://127.0.0.1:23119/bridge/mcp" }), META)).join("\n"), /must run node/);
+    assert.match(
+      failures(codexPackageChecks(mcp({ ...RELAY_SERVER, default_tools_approval_mode: "approve" }), META)).join("\n"),
+      /default_tools_approval_mode must not be set/,
+    );
+    const badPath = codexFiles({ ".codex-plugin/plugin.json": { ...CODEX_MANIFEST, hooks: "hooks/hooks.json", skills: "./missing/" } });
+    const detail = failures(codexPackageChecks(badPath, META)).join("\n");
     assert.match(detail, /hooks must start with "\.\/"/);
     assert.match(detail, /skills points at \.\/missing\//);
   });
@@ -936,14 +923,16 @@ describe("esbuild bundling", () => {
 });
 
 describe("Claude Desktop extension", () => {
-  const RELAY_OK = 'const http = require("node:http");\nhttp.request({ host: "127.0.0.1", port: 23119 });\nconst v = "0.1.0";\n';
+  const RELAY_OK = 'const http = require("node:http");\nhttp.request({ host: "127.0.0.1", port: 23119 });\nconst v = "1.0.0";\n';
   const manifest = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
     manifest_version: "0.2",
     name: "zotero-reading-bridge",
     display_name: "Zotero Reading Bridge",
-    version: "0.1.0",
+    version: "1.0.0",
     description: "Read-only Zotero.",
-    author: { name: "Contributors" },
+    author: { name: "a" },
+    license: "GPL-3.0-or-later",
+    keywords: ["zotero"],
     server: {
       type: "node",
       entry_point: "server/zotero-relay.js",
@@ -956,11 +945,11 @@ describe("Claude Desktop extension", () => {
     fileMap({ "manifest.json": manifest(), "server/zotero-relay.js": RELAY_OK, "README.md": "# 说明\n", "LICENSE": "GPL-3.0-or-later", ...overrides });
 
   it("accepts a well-formed package", () => {
-    assert.deepEqual(failures(claudeDesktopPackageChecks(desktopFiles(), "0.1.0")), []);
+    assert.deepEqual(failures(claudeDesktopPackageChecks(desktopFiles(), META)), []);
   });
 
   it("rejects host arguments, extra environment, wrong entry points and a required or unbounded port", () => {
-    const problems = (m: Record<string, unknown>): string => desktopManifestProblems(m, desktopFiles(), "0.1.0").join("\n");
+    const problems = (m: Record<string, unknown>): string => desktopManifestProblems(m, desktopFiles(), META).join("\n");
     const server = (mcpConfig: Record<string, unknown>) => ({ server: { type: "node", entry_point: "server/zotero-relay.js", mcp_config: mcpConfig } });
     assert.match(
       problems(manifest(server({ command: "node", args: ["${__dirname}/server/zotero-relay.js", "--port", "${user_config.port}", "--host", "0.0.0.0"] }))),
@@ -973,11 +962,11 @@ describe("Claude Desktop extension", () => {
     assert.match(problems(manifest({ server: { type: "python", entry_point: "x.py", mcp_config: {} } })), /server\.type must be "node"[\s\S]*entry_point/);
     assert.match(problems(manifest({ user_config: { port: { type: "string", default: 1, required: true } } })), /type must be "number"[\s\S]*default must be 23119[\s\S]*1-65535[\s\S]*optional/);
     assert.match(problems(manifest({ user_config: { port: {}, host: {} } })), /exactly "port"/);
-    assert.match(problems(manifest({ version: "0.0.9" })), /version must be 0\.1\.0/);
+    assert.match(problems(manifest({ version: "0.0.9" })), /version must be 1\.0\.0/);
   });
 
   it("flags extra files and relay bundles that listen, set Origin, require packages or lack the loopback target", () => {
-    assert.match(failures(claudeDesktopPackageChecks(desktopFiles({ "icon.png": "x" }), "0.1.0")).join("\n"), /unexpected icon\.png/);
+    assert.match(failures(claudeDesktopPackageChecks(desktopFiles({ "icon.png": "x" }), META)).join("\n"), /unexpected icon\.png/);
     assert.deepEqual(relayBundleProblems(RELAY_OK), []);
     assert.match(relayBundleProblems(`${RELAY_OK}http.createServer(() => {});`).join(), /listening socket/);
     assert.match(relayBundleProblems(`${RELAY_OK}server.listen(0);`).join(), /listening socket/);
@@ -1001,7 +990,7 @@ describe("Claude Desktop extension", () => {
   });
 
   it("the real relay sources bundle cleanly and pass the shipped-bundle checks", async () => {
-    const code = await bundleNodeScript(REPO_ROOT, "packages/claude-desktop/src/main.ts", "node18", "0.1.0");
+    const code = await bundleNodeScript(REPO_ROOT, "shared/relay/main.ts", "node18", "0.1.0");
     assert.deepEqual(relayBundleProblems(code), []);
   });
 });

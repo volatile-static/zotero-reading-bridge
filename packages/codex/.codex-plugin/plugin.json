@@ -1,21 +1,9 @@
 {
-  "name": "zotero-reading-bridge",
-  "version": "0.2.0",
   "description": "Read-only access to your local Zotero library and the current Zotero selection, attached to every prompt.",
-  "author": {
-    "name": "volatile-static"
-  },
-  "license": "GPL-3.0-or-later",
-  "keywords": [
-    "zotero",
-    "research",
-    "citations",
-    "pdf",
-    "mcp"
-  ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "hooks": "./hooks/hooks.json",
+  "requires_local_executor": true,
   "interface": {
     "displayName": "Zotero Reading Bridge",
     "shortDescription": "Read your local Zotero library",

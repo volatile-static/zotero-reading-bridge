@@ -1,7 +1,7 @@
 # 安装 Zotero 插件
 
 Zotero Reading Bridge 的核心是一个 Zotero 插件。它在 Zotero 自带的本机 HTTP 服务器上注册 MCP 端点
-`/bridge/mcp`，提供 18 个只读工具。Codex、Claude Code 等客户端都连接这个端点。
+`/bridge/mcp`，提供 19 个只读工具。Codex 桌面插件和 Claude 桌面应用扩展都经内置的 stdio 中继连接这个端点。
 
 ## 1. 要求
 
@@ -22,11 +22,11 @@ Local API（`/api/`），与本插件无关。
 
   ```powershell
   npm ci
-  npm run build      # 类型检查 + 打包，产物在 outputs/
-  npm run verify     # 校验产物结构、清单与敏感信息
+  npm run build      # 类型检查 + 打包 + 自动校验产物，产物在 outputs/
+  npm run verify     # （可选）重新校验已有产物的结构、清单与敏感信息
   ```
 
-  生成 `outputs/zotero-reading-bridge.xpi`。
+  生成 `outputs/zotero-reading-bridge.xpi`（同时生成 Codex ZIP 与 Claude 桌面应用 MCPB）。
 
 ## 3. 安装
 
@@ -58,7 +58,7 @@ Local API（`/api/`），与本插件无关。
 
 **连接 AI 客户端**
 
-设置页提示两个拖拽入口：Codex 的 Plugins → Add → New Plugin，以及 Claude 桌面版的设置 → 扩展。分别选择 ZIP 和 MCPB 安装包。
+设置页提示两个拖拽入口：Codex 的 Plugins → Add → New Plugin，以及 Claude 桌面版的设置 → 扩展。分别选择 `zotero-reading-bridge-codex.zip` 和 `zotero-reading-bridge-claude-desktop.mcpb`（详见 [Codex 安装说明](../packages/codex/README.md)、[Claude 桌面版安装说明](../packages/claude-desktop/README.md)）。
 
 **安全**：只读与本机访问说明，以及调试日志提示，见下文第 7 节。
 
@@ -102,16 +102,16 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:23119/bridge/mcp `
 
 ## 7. 安全边界：本机可访问、只读
 
-- **只读**：18 个工具都只读取数据，不创建、修改或删除任何条目、笔记、标签、集合或文件，也不触发同步或文件下载。
+- **只读**：19 个工具都只读取数据，不创建、修改或删除任何条目、笔记、标签、集合或文件，也不触发同步或文件下载。
 - **只在本机可访问**：Zotero 的 HTTP 服务器只监听 `127.0.0.1`；本插件在注册端点前会检查这一点，检查失败就不注册。
 - **但本机上的任何程序和任何用户都能访问**：端点没有身份验证。本机运行的任何程序（包括其他 Windows 用户账户下的程序）
   只要能连接 `127.0.0.1:23119`，就能读取整个文献库的元数据、笔记、批注和附件路径。只在你信任的电脑上启用；不用时在
   **工具 → 插件** 中禁用插件（见第 8 节）。
 - **本机其他程序也能冒充桥接**：方向反过来同样没有验证。Zotero 未运行、HTTP 服务器被关闭或绑定端口失败时，23119 端口是空闲的，
-  本机任何程序或其他 Windows 用户都可以监听它。Codex / Claude Code 启动时会连到这个程序，此后**每条消息**的 Hook 都会把它返回的文字
+  本机任何程序或其他 Windows 用户都可以监听它。Codex / Claude 桌面版启动时会连到这个程序，此后 Codex **每条消息**的 Hook 都会把它返回的文字
   作为附加上下文交给模型（整段文字由对方决定，包括“规则”和假的快照），它提供的服务器说明和工具说明也会进入模型上下文，
   模型可能照着执行命令。Hook 发出的只有会话 / 轮次 id，但注入的文字不受控制。因此：
-  - 在多人共用的电脑（实验室、机房、共享工作站）上，**不要安装 Codex / Claude Code 客户端插件**（尤其是其中的 Hook），
+  - 在多人共用的电脑（实验室、机房、共享工作站）上，**不要安装 Codex 插件或 Claude 桌面应用扩展**（尤其是 Codex 插件中的 Hook），
     或在不用时卸载；
   - 先启动 Zotero 再启动客户端，并在客户端中留意来历不明的“Zotero snapshot rules”或要求执行命令的内容；
   - 客户端无法验证服务器身份，这个风险只能靠上面的使用方式避免（桥接本身没有令牌：令牌只能证明客户端的身份，证明不了服务器的身份）。

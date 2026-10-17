@@ -1,17 +1,18 @@
 /**
- * Release build: typecheck -> bundle + stage (work/stage) -> archives (outputs/) -> BUILD-INFO.json.
+ * Release build: typecheck -> bundle + stage (work/stage) -> archives (outputs/) -> BUILD-INFO.json -> verify.
  *
  *   npm run build      (tsx scripts/build.ts)
  *
- * Only work/stage and outputs/ are ever deleted. Any failure removes outputs/ entirely, so a failed build
- * never leaves a complete-looking package behind; archives are written as *.partial and renamed when done.
- * Node fs/path/child_process only (no shell), so Chinese and space-containing paths work everywhere.
+ * One run packages all three plugins: the Zotero XPI, the Codex ZIP and the Claude Desktop MCPB (the last two carry
+ * the same relay bundle), plus source.zip. package.json supplies the metadata every manifest shares.
+ *
+ * Only work/stage and outputs/ are ever deleted. Any failure (including a failed package check) removes outputs/
+ * entirely, so a failed build never leaves a complete-looking package behind; archives are written as *.partial and
+ * renamed when done. Node fs/path/child_process only (no shell), so Chinese and space-containing paths work everywhere.
  */
-import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { BRIDGE_NAME } from "../shared/types/bridge.js";
-import { PLUGIN_NAME } from "../shared/types/hook.js";
 import { bundleClassicScript, bundleForInspection, bundleNodeScript } from "./lib/bundle.js";
 import { bundleContractProblems, endpointRegistrationProblems } from "./lib/checks.js";
 import { errorMessage, isMainModule, repoRootFrom } from "./lib/cli.js";
@@ -29,31 +30,40 @@ import {
 } from "./lib/files.js";
 import { expandIncludes, findIncludeMarkers } from "./lib/includes.js";
 import {
-  CLIENT_PACKAGES,
-  DESKTOP_MANIFEST,
-  DESKTOP_NODE_TARGET,
-  DESKTOP_RELAY_ENTRY,
-  DESKTOP_RELAY_OUT,
-  DESKTOP_SOURCE_DIR,
+  CODEX_MCP_CONFIG,
+  CODEX_PLUGIN,
+  CODEX_PORTABLE_MANIFEST,
+  CODEX_PORTABLE_MCP_CONFIG,
+  DESKTOP_PLUGIN,
   ENDPOINT_MODULE,
-  MARKETPLACE_MANIFESTS,
   OUTPUTS_DIR,
   OUTPUT_NAMES,
   PACKAGE_JSON,
-  PARTIAL_SUFFIX,
-  SCIENCE_SOURCE_DIR,
+  type PluginSpec,
+  RELAY_ENTRY,
+  RELAY_NODE_TARGET,
+  RELAY_OUT,
   STAGE_DIR,
   TSC_ENTRY,
   TYPECHECK_PROJECTS,
   ZOTERO_BUNDLES,
   ZOTERO_COPY_DIRS,
-  ZOTERO_MANIFEST,
-  ZOTERO_SOURCE_DIR,
+  ZOTERO_PLUGIN,
   sourceArchivePrefix,
 } from "./lib/layout.js";
-import { injectMarketplaceVersion, injectVersion, readPackageVersion } from "./lib/manifests.js";
+import {
+  type ManifestKind,
+  type PackageMetadata,
+  injectMetadata,
+  parseJsonObject,
+  portableCodexManifest,
+  portableMcpConfig,
+  readPackageMetadata,
+  serializeJson,
+} from "./lib/manifests.js";
+import { typecheck } from "./lib/typecheck.js";
 import { type ZipInputEntry, writeZipAtomic } from "./lib/zip.js";
-import { desktopPluginEntries } from "./package-desktop-plugin.js";
+import { formatReport, verifyPackage } from "./verify-package.js";
 
 export interface BuildOptions {
   /** Repository root; every input and output path is resolved against it. */
@@ -62,6 +72,8 @@ export interface BuildOptions {
   typecheckProjects?: readonly string[];
   /** TypeScript CLI script run with this Node binary; defaults to <root>/node_modules/typescript/bin/tsc. */
   tscPath?: string;
+  /** Run the package verifier on the outputs (default true). */
+  verify?: boolean;
   log?: (line: string) => void;
 }
 
@@ -81,14 +93,14 @@ export interface BuildInfo {
 
 interface BuildContext {
   root: string;
-  version: string;
+  meta: PackageMetadata;
   rules: readonly IgnoreRule[];
   stageDir: string;
   outputsDir: string;
   log: (line: string) => void;
 }
 
-const STAGE_NAMES = { zotero: "zotero", science: "claude-science", desktop: "claude-desktop" } as const;
+const PLUGINS = [ZOTERO_PLUGIN, CODEX_PLUGIN, DESKTOP_PLUGIN] as const;
 
 function abs(root: string, rel: string): string {
   return path.join(root, ...rel.split("/"));
@@ -112,60 +124,20 @@ function requireDirectory(ctx: BuildContext, rel: string): void {
   if (!isDirectory(abs(ctx.root, rel))) throw new Error(`missing input directory ${rel}`);
 }
 
-function stage(ctx: BuildContext, stageName: string, rel: string, data: Buffer | string): void {
-  writeFileEnsured(abs(path.join(ctx.stageDir, stageName), rel), data);
+function stage(ctx: BuildContext, plugin: PluginSpec, rel: string, data: Buffer | string): void {
+  writeFileEnsured(abs(path.join(ctx.stageDir, plugin.id), rel), data);
 }
-
-// ---------------------------------------------------------------------------------------------- typecheck
-
-interface TscRun {
-  project: string;
-  code: number;
-  output: string;
-  ms: number;
-}
-
-function runTsc(root: string, tscPath: string, project: string): Promise<TscRun> {
-  return new Promise((resolve, reject) => {
-    const started = Date.now();
-    const child = spawn(process.execPath, [tscPath, "-p", project, "--pretty", "false"], {
-      cwd: root,
-      shell: false,
-      windowsHide: true,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    const chunks: Buffer[] = [];
-    child.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
-    child.stderr.on("data", (chunk: Buffer) => chunks.push(chunk));
-    child.on("error", reject);
-    child.on("close", (code, signal) => {
-      const output = Buffer.concat(chunks).toString("utf8") + (signal ? `\n(tsc terminated by ${signal})` : "");
-      resolve({ project, code: code ?? 1, output, ms: Date.now() - started });
-    });
-  });
-}
-
-async function typecheck(ctx: BuildContext, projects: readonly string[], tscPath: string): Promise<void> {
-  if (projects.length === 0) {
-    ctx.log("typecheck skipped (no projects configured)");
-    return;
-  }
-  if (!isFile(tscPath)) throw new Error(`TypeScript compiler not found at ${tscPath} (run npm install)`);
-  for (const project of projects) requireFile(ctx, project);
-  // Independent projects: run them concurrently, report in a stable order.
-  const runs = await Promise.all(projects.map((project) => runTsc(ctx.root, tscPath, project)));
-  for (const run of runs) ctx.log(`typecheck ${run.project}: ${run.code === 0 ? "ok" : "FAILED"} (${run.ms} ms)`);
-  const failed = runs.filter((run) => run.code !== 0);
-  if (failed.length > 0) {
-    throw new Error(`typecheck failed:\n${failed.map((run) => `--- ${run.project}\n${run.output.trimEnd()}`).join("\n")}`);
-  }
-}
-
-// ------------------------------------------------------------------------------------------------ staging
 
 function isTypeScriptSource(rel: string): boolean {
   return /\.(?:[cm]?ts|tsx)$/.test(rel) || /(?:^|\/)tsconfig(?:\.[\w-]+)?\.json$/.test(rel);
 }
+
+function manifestWithMetadata(ctx: BuildContext, plugin: PluginSpec, kind: ManifestKind): Record<string, unknown> {
+  const rel = `${plugin.sourceDir}/${plugin.manifest}`;
+  return injectMetadata(requireFile(ctx, rel).toString("utf8"), ctx.meta, kind, rel);
+}
+
+// ------------------------------------------------------------------------------------------------ Zotero
 
 async function stageZotero(ctx: BuildContext): Promise<void> {
   const bundled = new Map<string, string>();
@@ -173,21 +145,20 @@ async function stageZotero(ctx: BuildContext): Promise<void> {
     requireFile(ctx, spec.entry);
     const code = await bundleClassicScript(ctx.root, spec);
     bundled.set(spec.out, code);
-    stage(ctx, STAGE_NAMES.zotero, spec.out, code);
+    stage(ctx, ZOTERO_PLUGIN, spec.out, code);
     ctx.log(`bundled ${spec.entry} -> ${spec.out}`);
   }
   await assertBundleContracts(ctx, bundled);
 
-  const manifest = `${ZOTERO_SOURCE_DIR}/${ZOTERO_MANIFEST}`;
-  stage(ctx, STAGE_NAMES.zotero, ZOTERO_MANIFEST, withVersion(ctx, manifest, requireFile(ctx, manifest)));
+  stage(ctx, ZOTERO_PLUGIN, ZOTERO_PLUGIN.manifest, serializeJson(manifestWithMetadata(ctx, ZOTERO_PLUGIN, "zotero")));
   for (const dir of ZOTERO_COPY_DIRS) {
-    const base = `${ZOTERO_SOURCE_DIR}/${dir}`;
+    const base = `${ZOTERO_PLUGIN.sourceDir}/${dir}`;
     requireDirectory(ctx, base);
     for (const rel of walkFiles(ctx.root, base, ctx.rules)) {
       if (isTypeScriptSource(rel)) continue;
-      const inner = relativeTo(ZOTERO_SOURCE_DIR, rel);
+      const inner = relativeTo(ZOTERO_PLUGIN.sourceDir, rel);
       if (bundled.has(inner)) throw new Error(`${rel} would overwrite the bundle ${inner}; delete the stale file`);
-      stage(ctx, STAGE_NAMES.zotero, inner, requireFile(ctx, rel));
+      stage(ctx, ZOTERO_PLUGIN, inner, requireFile(ctx, rel));
     }
   }
 }
@@ -212,11 +183,7 @@ async function assertBundleContracts(ctx: BuildContext, bundled: ReadonlyMap<str
   ctx.log("bundle contracts ok (bootstrap hooks, ZoteroReadingBridgeMain, endpoint init arity)");
 }
 
-function withVersion(ctx: BuildContext, rel: string, data: Buffer): string {
-  const { text, previous } = injectVersion(data.toString("utf8"), ctx.version, rel);
-  if (previous !== ctx.version) ctx.log(`${rel}: version ${JSON.stringify(previous)} -> ${ctx.version}`);
-  return text;
-}
+// ------------------------------------------------------------------------------------- desktop plugins
 
 function includeLoader(ctx: BuildContext): (target: string) => string | null {
   return (target) => {
@@ -227,53 +194,53 @@ function includeLoader(ctx: BuildContext): (target: string) => string | null {
   };
 }
 
-/** Copy a plugin/skill tree (dotfiles included), expanding Markdown includes and injecting versions. */
-function stageTree(ctx: BuildContext, sourceDir: string, stageName: string, manifest: string | null): void {
-  requireDirectory(ctx, sourceDir);
-  const files = walkFiles(ctx.root, sourceDir, ctx.rules);
-  if (manifest && !files.includes(`${sourceDir}/${manifest}`)) throw new Error(`missing input file ${sourceDir}/${manifest}`);
+/**
+ * Stage a desktop plugin directory (dotfiles included): the manifest with the shared metadata filled in, Markdown
+ * with includes expanded, the shared relay, everything else as it is. Returns the staged manifest.
+ */
+function stageDesktopPlugin(ctx: BuildContext, plugin: PluginSpec, relay: string): Record<string, unknown> {
+  requireDirectory(ctx, plugin.sourceDir);
+  const manifest = manifestWithMetadata(ctx, plugin, "client");
+  stage(ctx, plugin, plugin.manifest, serializeJson(manifest));
+  stage(ctx, plugin, RELAY_OUT, relay);
   const load = includeLoader(ctx);
+  const files = walkFiles(ctx.root, plugin.sourceDir, ctx.rules);
   for (const rel of files) {
-    const inner = relativeTo(sourceDir, rel);
+    const inner = relativeTo(plugin.sourceDir, rel);
+    if (inner === plugin.manifest || isTypeScriptSource(rel)) continue;
+    if (inner === RELAY_OUT) throw new Error(`${rel} would overwrite the relay bundle; delete the stale file`);
     let data: Buffer | string = requireFile(ctx, rel);
-    if (inner === manifest || (sourceDir === "packages/codex" && inner === "plugin.json")) {
-      data = withVersion(ctx, rel, data);
-    } else if ((MARKETPLACE_MANIFESTS as readonly string[]).includes(inner)) {
-      data = injectMarketplaceVersion(data.toString("utf8"), PLUGIN_NAME, ctx.version, rel);
-    } else if (inner.toLowerCase().endsWith(".md")) {
+    if (inner.toLowerCase().endsWith(".md")) {
       const expanded = expandIncludes(data.toString("utf8"), rel, load);
       const leftover = findIncludeMarkers(expanded);
       if (leftover.length > 0) throw new Error(`${rel}: unresolved include markers at lines ${leftover.join(", ")}`);
       data = expanded;
     }
-    stage(ctx, stageName, inner, data);
+    stage(ctx, plugin, inner, data);
   }
-  ctx.log(`staged ${sourceDir} (${files.length} files)`);
+  ctx.log(`staged ${plugin.sourceDir} (${files.length} files + ${RELAY_OUT})`);
+  return manifest;
 }
 
-/**
- * Claude Desktop extension: manifest (version injected), the relay bundled from src/ (TypeScript sources and tsconfig
- * are not shipped), and the other files of the package directory as they are.
- */
-async function stageDesktop(ctx: BuildContext): Promise<void> {
-  const manifest = `${DESKTOP_SOURCE_DIR}/${DESKTOP_MANIFEST}`;
-  stage(ctx, STAGE_NAMES.desktop, DESKTOP_MANIFEST, withVersion(ctx, manifest, requireFile(ctx, manifest)));
-  requireFile(ctx, DESKTOP_RELAY_ENTRY);
-  stage(ctx, STAGE_NAMES.desktop, DESKTOP_RELAY_OUT, await bundleNodeScript(ctx.root, DESKTOP_RELAY_ENTRY, DESKTOP_NODE_TARGET, ctx.version));
-  ctx.log(`bundled ${DESKTOP_RELAY_ENTRY} -> ${DESKTOP_RELAY_OUT}`);
-  for (const rel of walkFiles(ctx.root, DESKTOP_SOURCE_DIR, ctx.rules)) {
-    const inner = relativeTo(DESKTOP_SOURCE_DIR, rel);
-    if (inner === DESKTOP_MANIFEST || isTypeScriptSource(rel)) continue;
-    if (inner === DESKTOP_RELAY_OUT) throw new Error(`${rel} would overwrite the relay bundle; delete the stale file`);
-    stage(ctx, STAGE_NAMES.desktop, inner, requireFile(ctx, rel));
+/** Codex also ships agent-plugins.org copies of its manifest and MCP config, derived from its own. */
+function stageCodex(ctx: BuildContext, relay: string): void {
+  const manifest = stageDesktopPlugin(ctx, CODEX_PLUGIN, relay);
+  const mcpRel = `${CODEX_PLUGIN.sourceDir}/${CODEX_MCP_CONFIG}`;
+  const mcp = parseJsonObject(requireFile(ctx, mcpRel).toString("utf8"), mcpRel);
+  for (const derived of [CODEX_PORTABLE_MANIFEST, CODEX_PORTABLE_MCP_CONFIG]) {
+    if (isFile(abs(ctx.root, `${CODEX_PLUGIN.sourceDir}/${derived}`))) {
+      throw new Error(`${CODEX_PLUGIN.sourceDir}/${derived} is generated by the build; delete the source file`);
+    }
   }
+  stage(ctx, CODEX_PLUGIN, CODEX_PORTABLE_MANIFEST, serializeJson(portableCodexManifest(manifest)));
+  stage(ctx, CODEX_PLUGIN, CODEX_PORTABLE_MCP_CONFIG, serializeJson(portableMcpConfig(mcp)));
 }
 
 // ---------------------------------------------------------------------------------------------- packaging
 
-function stagedEntries(ctx: BuildContext, stageName: string): ZipInputEntry[] {
-  return walkFiles(ctx.stageDir, stageName, []).map((rel) => ({
-    name: relativeTo(stageName, rel),
+function stagedEntries(ctx: BuildContext, plugin: PluginSpec): ZipInputEntry[] {
+  return walkFiles(ctx.stageDir, plugin.id, []).map((rel) => ({
+    name: relativeTo(plugin.id, rel),
     data: fs.readFileSync(abs(ctx.stageDir, rel)),
   }));
 }
@@ -283,19 +250,8 @@ async function writeArchive(ctx: BuildContext, name: string, entries: ZipInputEn
   ctx.log(`wrote ${OUTPUTS_DIR}/${name} (${entries.length} entries)`);
 }
 
-/** The Claude Science skill ships as a plain directory; copy it via a partial dir and rename. */
-function writeScienceDirectory(ctx: BuildContext): void {
-  const target = path.join(ctx.outputsDir, OUTPUT_NAMES.scienceDir);
-  const partial = `${target}${PARTIAL_SUFFIX}`;
-  removeTree(partial);
-  const entries = stagedEntries(ctx, STAGE_NAMES.science);
-  for (const entry of entries) writeFileEnsured(abs(partial, entry.name), entry.data);
-  fs.renameSync(partial, target);
-  ctx.log(`wrote ${OUTPUTS_DIR}/${OUTPUT_NAMES.scienceDir}/ (${entries.length} files)`);
-}
-
 function sourceEntries(ctx: BuildContext): ZipInputEntry[] {
-  const prefix = sourceArchivePrefix(ctx.version);
+  const prefix = sourceArchivePrefix(ctx.meta.version);
   return walkFiles(ctx.root, "", ctx.rules).map((rel) => ({
     name: `${prefix}${rel}`,
     data: fs.readFileSync(abs(ctx.root, rel)),
@@ -320,42 +276,46 @@ export async function runBuild(options: BuildOptions): Promise<BuildInfo> {
   const stageDir = resolveInside(root, STAGE_DIR);
   const log = options.log ?? ((line: string) => console.log(`[build] ${line}`));
   try {
-    const version = readPackageVersion(fs.readFileSync(abs(root, PACKAGE_JSON), "utf8"));
-    const ctx: BuildContext = { root, version, rules: loadPackagingIgnoreRules(root), stageDir, outputsDir, log };
-    log(`${BRIDGE_NAME} ${version}`);
+    const meta = readPackageMetadata(fs.readFileSync(abs(root, PACKAGE_JSON), "utf8"));
+    const ctx: BuildContext = { root, meta, rules: loadPackagingIgnoreRules(root), stageDir, outputsDir, log };
+    log(`${BRIDGE_NAME} ${meta.version}`);
 
-    await typecheck(ctx, options.typecheckProjects ?? TYPECHECK_PROJECTS, options.tscPath ?? abs(root, TSC_ENTRY));
+    await typecheck(root, options.typecheckProjects ?? TYPECHECK_PROJECTS, options.tscPath ?? abs(root, TSC_ENTRY), log);
 
     removeTree(stageDir);
     removeTree(outputsDir);
     fs.mkdirSync(outputsDir, { recursive: true });
 
     await stageZotero(ctx);
-    for (const client of CLIENT_PACKAGES) stageTree(ctx, client.sourceDir, client.id, client.manifest);
-    stageTree(ctx, SCIENCE_SOURCE_DIR, STAGE_NAMES.science, null);
-    await stageDesktop(ctx);
-    // Every distributable carries the project's license and attribution.
-    for (const stageName of [STAGE_NAMES.zotero, "codex", STAGE_NAMES.desktop, STAGE_NAMES.science]) {
-      stage(ctx, stageName, "LICENSE", requireFile(ctx, "LICENSE"));
-    }
+    requireFile(ctx, RELAY_ENTRY);
+    const relay = await bundleNodeScript(root, RELAY_ENTRY, RELAY_NODE_TARGET, meta.version);
+    log(`bundled ${RELAY_ENTRY} -> ${RELAY_OUT}`);
+    stageCodex(ctx, relay);
+    stageDesktopPlugin(ctx, DESKTOP_PLUGIN, relay);
 
-    await writeArchive(ctx, OUTPUT_NAMES.xpi, stagedEntries(ctx, STAGE_NAMES.zotero));
-    const desktopEntries = stagedEntries(ctx, STAGE_NAMES.desktop);
-    const relay = desktopEntries.find((entry) => entry.name === DESKTOP_RELAY_OUT);
-    if (!relay) throw new Error("Missing staged desktop relay");
-    await writeArchive(ctx, OUTPUT_NAMES.codex, desktopPluginEntries(stagedEntries(ctx, "codex"), relay));
-    await writeArchive(ctx, OUTPUT_NAMES.claudeDesktop, desktopEntries);
-    writeScienceDirectory(ctx);
+    const license = requireFile(ctx, "LICENSE");
+    for (const plugin of PLUGINS) {
+      // Every distributable carries the project's license and attribution.
+      stage(ctx, plugin, "LICENSE", license);
+      await writeArchive(ctx, plugin.archive, stagedEntries(ctx, plugin));
+    }
     await writeArchive(ctx, OUTPUT_NAMES.source, sourceEntries(ctx));
 
     const info: BuildInfo = {
       name: BRIDGE_NAME,
-      version,
+      version: meta.version,
       builtAt: new Date().toISOString(),
       files: outputInventory(outputsDir),
     };
     fs.writeFileSync(path.join(outputsDir, OUTPUT_NAMES.buildInfo), `${JSON.stringify(info, null, 2)}\n`);
     log(`wrote ${OUTPUTS_DIR}/${OUTPUT_NAMES.buildInfo}`);
+
+    if (options.verify ?? true) {
+      const rows = await verifyPackage({ root });
+      const failed = rows.filter((row) => !row.ok);
+      if (failed.length > 0) throw new Error(`package checks failed:\n${formatReport(failed)}`);
+      log(`verify: ${rows.length} package checks passed`);
+    }
     return info;
   } catch (error) {
     removeTree(outputsDir);

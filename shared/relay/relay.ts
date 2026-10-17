@@ -1,5 +1,6 @@
 /**
- * stdio <-> HTTP relay for Claude Desktop, whose local MCP servers and extensions (.mcpb) can only be stdio commands.
+ * stdio <-> HTTP relay shipped in both desktop plugins (Claude Desktop .mcpb and the Codex ZIP), whose local MCP servers
+ * can only be stdio commands.
  *
  * Reads newline-delimited JSON-RPC from `input`, POSTs each line unchanged to http://127.0.0.1:<port>/bridge/mcp and
  * writes each JSON response as one line to `output` (202 without a body writes nothing). Protocol handling stays in
@@ -14,7 +15,7 @@
 import http from "node:http";
 import readline from "node:readline";
 import type { Readable, Writable } from "node:stream";
-import { DEFAULT_ZOTERO_PORT, ENDPOINT_PATH, LOOPBACK_HOST, endpointUrl } from "../../../shared/types/bridge.js";
+import { DEFAULT_ZOTERO_PORT, ENDPOINT_PATH, LOOPBACK_HOST, endpointUrl } from "../types/bridge.js";
 
 export const RELAY_NAME = "zotero-reading-bridge-relay";
 /** JSON-RPC "server error" code used for answers the relay makes up when Zotero cannot answer. */

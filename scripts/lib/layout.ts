@@ -7,14 +7,14 @@ import { BRIDGE_NAME } from "../../shared/types/bridge.js";
 export const PACKAGE_JSON = "package.json";
 export const GITIGNORE = ".gitignore";
 
-/** tsconfig projects checked before anything is bundled (same set as `npm run typecheck`). */
+/** tsconfig projects checked by `npm run typecheck` and before anything is bundled. */
 export const TYPECHECK_PROJECTS = [
   "packages/zotero/tsconfig.json",
   "packages/zotero/content/tsconfig.json",
+  "shared/relay/tsconfig.json",
   "scripts/tsconfig.json",
   "tests/tsconfig.json",
   "tests/zotero/seed-plugin/tsconfig.json",
-  "packages/claude-desktop/tsconfig.json",
 ] as const;
 export const TSC_ENTRY = "node_modules/typescript/bin/tsc";
 
@@ -78,42 +78,42 @@ export const XPI_LOCALES = ["en-US", "zh-CN"] as const;
 
 export const OUTPUT_NAMES = {
   xpi: `${BRIDGE_NAME}.xpi`,
-  codex: `${BRIDGE_NAME}-desktop.zip`,
+  codex: `${BRIDGE_NAME}-codex.zip`,
   claudeDesktop: `${BRIDGE_NAME}-claude-desktop.mcpb`,
-  scienceDir: "claude-science-zotero-skill",
   source: "source.zip",
   buildInfo: "BUILD-INFO.json",
 } as const;
 
-export interface ClientPackageSpec {
-  id: "codex" | "claude-code";
+/**
+ * The stdio <-> HTTP relay both desktop plugins ship: bundled once from TypeScript into one CommonJS file and added
+ * to the Codex ZIP and the Claude Desktop MCPB at the same path.
+ */
+export const RELAY_ENTRY = "shared/relay/main.ts";
+export const RELAY_OUT = "server/zotero-relay.js";
+/** Oldest Node the relay bundle targets (MCPB compatibility.runtimes.node; Codex uses the system Node). */
+export const RELAY_NODE_TARGET = "node18";
+
+/** Every staged plugin: source directory, manifest inside it (shared metadata filled in), and archive name. */
+export interface PluginSpec {
+  id: "zotero" | "codex" | "claude-desktop";
   sourceDir: string;
-  /** Plugin manifest inside the plugin root; its `version` is replaced by package.json's. */
   manifest: string;
   archive: string;
 }
 
-export const CLIENT_PACKAGES: readonly ClientPackageSpec[] = [
-  { id: "codex", sourceDir: "packages/codex", manifest: ".codex-plugin/plugin.json", archive: OUTPUT_NAMES.codex },
-];
+export const ZOTERO_PLUGIN: PluginSpec = { id: "zotero", sourceDir: ZOTERO_SOURCE_DIR, manifest: ZOTERO_MANIFEST, archive: OUTPUT_NAMES.xpi };
+/** Codex plugin: the package directory as it is (its .mcp.json already launches the relay) plus derived portable copies. */
+export const CODEX_PLUGIN: PluginSpec = { id: "codex", sourceDir: "packages/codex", manifest: ".codex-plugin/plugin.json", archive: OUTPUT_NAMES.codex };
+/** Claude Desktop extension (.mcpb): manifest.json, README.md and the relay. */
+export const DESKTOP_PLUGIN: PluginSpec = { id: "claude-desktop", sourceDir: "packages/claude-desktop", manifest: "manifest.json", archive: OUTPUT_NAMES.claudeDesktop };
 
-/** Marketplace manifests whose plugin entries may carry a `version` that must match the plugin's. */
-export const MARKETPLACE_MANIFESTS = [".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"] as const;
+export const CODEX_MCP_CONFIG = ".mcp.json";
+/** agent-plugins.org copies derived from the Codex files at build time (the source tree has only Codex's own). */
+export const CODEX_PORTABLE_MANIFEST = "plugin.json";
+export const CODEX_PORTABLE_MCP_CONFIG = "mcp.json";
 
-/**
- * Claude Desktop extension (.mcpb): manifest.json with the version injected, the relay bundled from TypeScript into one
- * CommonJS file, and the remaining non-TypeScript files (README.md) copied as they are.
- */
-export const DESKTOP_SOURCE_DIR = "packages/claude-desktop";
-export const DESKTOP_MANIFEST = "manifest.json";
-export const DESKTOP_RELAY_ENTRY = "packages/claude-desktop/src/main.ts";
-/** Path of the bundled relay inside the .mcpb (manifest server.entry_point). */
-export const DESKTOP_RELAY_OUT = "server/zotero-relay.js";
-export const DESKTOP_REQUIRED_FILES = [DESKTOP_MANIFEST, DESKTOP_RELAY_OUT, "README.md", "LICENSE"] as const;
-/** Oldest Node the relay bundle targets (manifest compatibility.runtimes.node). */
-export const DESKTOP_NODE_TARGET = "node18";
+export const DESKTOP_REQUIRED_FILES = [DESKTOP_PLUGIN.manifest, RELAY_OUT, "README.md", "LICENSE"] as const;
 
-export const SCIENCE_SOURCE_DIR = "integrations/claude-science";
 export const SKILL_FILE = "skills/zotero/SKILL.md";
 export const SKILL_NAME = "zotero";
 

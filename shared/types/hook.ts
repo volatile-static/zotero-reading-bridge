@@ -1,8 +1,9 @@
 /**
- * Contract between client hooks (Codex / Claude Code `mcp_tool` UserPromptSubmit hooks)
+ * Contract between client `mcp_tool` UserPromptSubmit hooks (the Codex plugin ships one; the server also accepts
+ * Claude Code's shape, which differs only in its ids)
  * and the capture_prompt_context tool.
  *
- * Both clients concatenate the tool's text content and parse it like command-hook stdout:
+ * Hook clients concatenate the tool's text content and parse it like command-hook stdout:
  *  - exactly `{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"..."}}`
  *    with NO other keys (Codex uses deny_unknown_fields) is applied as additional context;
  *  - isError: true is a non-blocking failure that injects nothing, so it is never used for
@@ -26,22 +27,8 @@ export interface UserPromptSubmitHookOutput {
   };
 }
 
-/** Server names the client plugins use for the bundled MCP server. Hooks must reference these. */
-export const CLIENT_SERVER_NAMES = {
-  /** Codex: bare key from the plugin's .mcp.json (flat namespace shared with config.toml). */
-  codex: "zotero_bridge",
-  /** Claude Code: key inside the plugin's .mcp.json ... */
-  claudeCode: "zotero",
-  /** ... which hooks must reference as plugin:<plugin-name>:<server-key>. */
-  claudeCodeHookServer: "plugin:zotero-reading-bridge:zotero",
-  /**
-   * Claude Code manual registration (`claude mcp add`) and its settings.json hook. Same distinctive name as Codex:
-   * a bare "zotero" is often taken by another Zotero MCP server, and a same-name server at a higher-precedence
-   * scope (local > project > user) would shadow the bridge and receive the hook calls.
-   */
-  claudeCodeManual: "zotero_bridge",
-  /** Claude Desktop manual stdio registration (claude_desktop_config.json) of the relay; no hooks there. */
-  claudeDesktopManual: "zotero_bridge",
-} as const;
-
-export const PLUGIN_NAME = "zotero-reading-bridge";
+/**
+ * Server key in the Codex plugin's .mcp.json, which its hook must reference. Codex shares one flat namespace with
+ * config.toml, so the name is distinctive: a bare "zotero" is often taken by another Zotero MCP server.
+ */
+export const CODEX_SERVER_NAME = "zotero_bridge";

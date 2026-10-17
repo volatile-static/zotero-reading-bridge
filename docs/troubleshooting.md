@@ -29,14 +29,14 @@
 
 ## 2. Codex 桌面版
 
-- 安装失败：确认使用 zotero-reading-bridge-desktop.zip，在 Plugins → Add → New Plugin 导入；无需解压。
+- 安装失败：确认使用 zotero-reading-bridge-codex.zip，在 Customize → Plugins → Add → New Plugin 导入；无需解压。详见 [Codex 安装说明](../packages/codex/README.md)。
 - 工具不可用：确认 Node.js 可用、Zotero 已启动且 Bridge 已启用，再新建本地对话。
 - 没有自动快照：检查 Hook 是否获得信任；也可要求模型调用 get_current_context。
 - 工具重复或仍使用旧配置：清理旧安装留下的同名服务器和 Hook，再启用拖拽安装的插件。
 
 ## 3. Claude 桌面版
 
-在设置 → 扩展导入 zotero-reading-bridge-claude-desktop.mcpb。连接失败时核对 Zotero 状态和扩展端口，重新启用扩展或完全重启 Claude。详见 [安装说明](install-claude-desktop.md)。
+在设置 → 扩展导入 zotero-reading-bridge-claude-desktop.mcpb。连接失败时核对 Zotero 状态和扩展端口，重新启用扩展或完全重启 Claude。详见 [安装说明](../packages/claude-desktop/README.md)。
 
 ## 4. 快照内容
 

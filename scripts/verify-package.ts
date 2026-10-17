@@ -15,9 +15,7 @@ import {
   type FileMap,
   claudeDesktopPackageChecks,
   codexPackageChecks,
-  readText,
   runCheck,
-  skillProblems,
   xpiPackageChecks,
 } from "./lib/checks.js";
 import { errorMessage, formatTable, isMainModule, repoRootFrom } from "./lib/cli.js";
@@ -26,20 +24,18 @@ import {
   compareStrings,
   isPathIgnored,
   loadPackagingIgnoreRules,
-  relativeTo,
   sha256,
   walkFiles,
 } from "./lib/files.js";
 import { findIncludeMarkers } from "./lib/includes.js";
 import {
-  DESKTOP_RELAY_OUT,
+  RELAY_OUT,
   OUTPUTS_DIR,
   OUTPUT_NAMES,
   PACKAGE_JSON,
-  SKILL_FILE,
   sourceArchivePrefix,
 } from "./lib/layout.js";
-import { isRecord, readPackageVersion } from "./lib/manifests.js";
+import { type PackageMetadata, isRecord, readPackageMetadata } from "./lib/manifests.js";
 import {
   ABSOLUTE_PATH_RULES,
   SECRET_RULES,
@@ -60,7 +56,7 @@ export interface VerifyRow extends CheckResult {
   group: string;
 }
 
-/** A packaged file set: archive or directory name in outputs/, plus its files. */
+/** A packaged file set: archive name in outputs/, plus its files. */
 interface PackageContent {
   label: string;
   files: FileMap;
@@ -87,11 +83,11 @@ function inventoryProblems(outputsDir: string): string[] {
   if (!fs.existsSync(outputsDir)) return [`${OUTPUTS_DIR}/ does not exist (run npm run build)`];
   const problems: string[] = [];
   const present = new Map(fs.readdirSync(outputsDir, { withFileTypes: true }).map((d) => [d.name, d]));
-  const expected: readonly string[] = [...ARCHIVES, OUTPUT_NAMES.scienceDir, OUTPUT_NAMES.buildInfo];
+  const expected: readonly string[] = [...ARCHIVES, OUTPUT_NAMES.buildInfo];
   for (const name of expected) {
     const entry = present.get(name);
     if (!entry) problems.push(`missing ${name}`);
-    else if ((name === OUTPUT_NAMES.scienceDir) !== entry.isDirectory()) problems.push(`${name} has the wrong type`);
+    else if (!entry.isFile()) problems.push(`${name} is not a file`);
   }
   for (const name of present.keys()) if (!expected.includes(name)) problems.push(`unexpected ${name}`);
   return problems;
@@ -111,16 +107,6 @@ async function readArchive(outputsDir: string, name: string, rows: VerifyRow[]):
     rows.push({ group: name, name: "archive readable", ok: false, detail: errorMessage(error) });
     return null;
   }
-}
-
-function readDirectory(outputsDir: string, name: string): FileMap | null {
-  if (!fs.existsSync(path.join(outputsDir, name))) return null;
-  return new Map(
-    walkFiles(outputsDir, name, []).map((rel) => [
-      relativeTo(name, rel),
-      fs.readFileSync(path.join(outputsDir, ...rel.split("/"))),
-    ]),
-  );
 }
 
 function sourceProblems(files: FileMap, version: string, rules: readonly IgnoreRule[]): string[] {
@@ -212,7 +198,7 @@ function runNode(script: string, args: readonly string[], stdin: string): Promis
  * to a port where nothing listens (1) must come back as one JSON-RPC error line for the same id.
  */
 async function relaySmokeCheck(relay: Buffer): Promise<CheckResult> {
-  const name = `${DESKTOP_RELAY_OUT} runs: rejects --host 0.0.0.0, answers unreachable Zotero with a JSON-RPC error`;
+  const name = `${RELAY_OUT} runs: rejects --host 0.0.0.0, answers unreachable Zotero with a JSON-RPC error`;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "zotero-relay-verify-"));
   try {
     const script = path.join(dir, "zotero-relay.js");
@@ -245,15 +231,16 @@ export async function verifyPackage(options: VerifyOptions): Promise<VerifyRow[]
   const root = path.resolve(options.root);
   const outputsDir = path.join(root, OUTPUTS_DIR);
   const rows: VerifyRow[] = [];
-  let version: string;
+  let meta: PackageMetadata;
   let rules: IgnoreRule[];
   try {
-    version = readPackageVersion(fs.readFileSync(path.join(root, PACKAGE_JSON), "utf8"));
+    meta = readPackageMetadata(fs.readFileSync(path.join(root, PACKAGE_JSON), "utf8"));
     rules = loadPackagingIgnoreRules(root);
   } catch (error) {
     return [{ group: "setup", name: "read package.json and .gitignore", ok: false, detail: errorMessage(error) }];
   }
 
+  const version = meta.version;
   rows.push({ group: "outputs", ...runCheck("expected outputs present, nothing else", () => inventoryProblems(outputsDir)) });
 
   const contents: PackageContent[] = [];
@@ -269,29 +256,19 @@ export async function verifyPackage(options: VerifyOptions): Promise<VerifyRow[]
   const codex = await readArchive(outputsDir, OUTPUT_NAMES.codex, rows);
   if (codex) {
     contents.push({ label: OUTPUT_NAMES.codex, files: codex });
-    add(OUTPUT_NAMES.codex, codexPackageChecks(codex, version, true));
+    add(OUTPUT_NAMES.codex, codexPackageChecks(codex, meta));
   }
   const desktop = await readArchive(outputsDir, OUTPUT_NAMES.claudeDesktop, rows);
   if (desktop) {
-    rows.push({ group: OUTPUT_NAMES.codex, ...runCheck("relay matches Claude Desktop byte for byte", () => {
-      const relay = codex?.get(DESKTOP_RELAY_OUT);
-      const other = desktop.get(DESKTOP_RELAY_OUT);
+    rows.push({ group: OUTPUT_NAMES.codex, ...runCheck("relay identical to the Claude Desktop one", () => {
+      const relay = codex?.get(RELAY_OUT);
+      const other = desktop.get(RELAY_OUT);
       return relay && other && relay.equals(other) ? [] : ["desktop relay mismatch"];
     }) });
     contents.push({ label: OUTPUT_NAMES.claudeDesktop, files: desktop });
-    add(OUTPUT_NAMES.claudeDesktop, claudeDesktopPackageChecks(desktop, version));
-    const relay = desktop.get(DESKTOP_RELAY_OUT);
+    add(OUTPUT_NAMES.claudeDesktop, claudeDesktopPackageChecks(desktop, meta));
+    const relay = desktop.get(RELAY_OUT);
     if (relay) rows.push({ group: OUTPUT_NAMES.claudeDesktop, ...(await relaySmokeCheck(relay)) });
-  }
-  const science = readDirectory(outputsDir, OUTPUT_NAMES.scienceDir);
-  if (science) {
-    contents.push({ label: OUTPUT_NAMES.scienceDir, files: science });
-    add(OUTPUT_NAMES.scienceDir, [
-      runCheck(`${SKILL_FILE} front matter`, () => skillProblems(science)),
-      runCheck("README.md present", () => (readText(science, "README.md").trim() ? [] : ["README.md is empty"])),
-    ]);
-  } else {
-    rows.push({ group: OUTPUT_NAMES.scienceDir, name: "directory present", ok: false, detail: "missing" });
   }
   const source = await readArchive(outputsDir, OUTPUT_NAMES.source, rows);
   if (source) {

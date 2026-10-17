@@ -4,7 +4,7 @@ Zotero Reading Bridge 本身以 GNU GPL v3 或更新版本（GPL-3.0-or-later）
 
 ## 发布产物中不包含第三方代码
 
-`outputs/` 中的发布产物（Zotero 插件 `zotero-reading-bridge.xpi`、Codex 插件包、Claude Code 插件包、Claude Science 技能目录）
+`outputs/` 中的发布产物（Zotero 插件 `zotero-reading-bridge.xpi`、Codex 插件 `zotero-reading-bridge-codex.zip`、Claude 桌面扩展 `zotero-reading-bridge-claude-desktop.mcpb`）
 只包含本项目自己的代码、配置和文档。下表中的依赖全部是**开发依赖**，只在构建、类型检查和测试时使用，不会被打包进任何产物：
 esbuild 只打包本仓库内的 TypeScript 源文件，Zotero 插件运行时没有任何 npm 运行时依赖。
 
@@ -31,7 +31,7 @@ esbuild 只打包本仓库内的 TypeScript 源文件，Zotero 插件运行时�
 
 - **Zotero**（AGPL-3.0）：本插件在运行时调用 Zotero 桌面版公开和内部的 JavaScript API（如 `Zotero.Server`、`Zotero.Items`、
   `Zotero.Reader`），以及 Zotero 自带的 HTTP 服务器。Zotero 的任何代码都没有被复制或打包进本项目。
-- **Codex**、**Claude Code**、**Claude Science**：本项目只提供它们读取的插件配置文件和技能说明，不包含、不修改它们的任何组件。
+- **Codex**、**Claude 桌面应用**：本项目只提供它们读取的插件配置、技能说明和本项目自己的中继程序，不包含、不修改它们的任何组件。
 
 ## 仅作参考、未复制代码的项目
 

@@ -1,13 +1,8 @@
 {
   "manifest_version": "0.2",
-  "name": "zotero-reading-bridge",
   "display_name": "Zotero Reading Bridge",
-  "version": "0.2.0",
   "description": "Read-only access to your local Zotero library through the Zotero Reading Bridge plugin (stdio relay to 127.0.0.1).",
-  "long_description": "Relays MCP messages between Claude Desktop and the Zotero Reading Bridge plugin running inside Zotero 11 on this computer (http://127.0.0.1:<port>/bridge/mcp). The relay is a child process of Claude Desktop: it opens no listening port and only ever connects to 127.0.0.1. All 18 tools are read-only. Nothing about the current Zotero selection is attached to messages automatically; the model calls get_current_context when you refer to the open or selected paper.",
-  "author": { "name": "volatile-static" },
-  "license": "GPL-3.0-or-later",
-  "keywords": ["zotero", "research", "citations", "pdf", "mcp"],
+  "long_description": "Relays MCP messages between Claude Desktop and the Zotero Reading Bridge plugin running inside Zotero 11 on this computer (http://127.0.0.1:<port>/bridge/mcp). The relay is a child process of Claude Desktop: it opens no listening port and only ever connects to 127.0.0.1. All tools are read-only. Nothing about the current Zotero selection is attached to messages automatically; the model calls get_current_context when you refer to the open or selected paper.",
   "server": {
     "type": "node",
     "entry_point": "server/zotero-relay.js",

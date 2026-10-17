@@ -1,9 +1,9 @@
 /**
  * Command-line entry of the relay (bundled to server/zotero-relay.js; Claude Desktop runs it as
- * `node zotero-relay.js --port <port>`). stdout carries only JSON-RPC; diagnostics go to stderr, which Claude Desktop
- * writes to its MCP server log.
+ * `node zotero-relay.js --port <port>`, Codex without arguments). stdout carries only JSON-RPC; diagnostics go to
+ * stderr, which the client writes to its MCP server log.
  */
-import { endpointUrl } from "../../../shared/types/bridge.js";
+import { endpointUrl } from "../types/bridge.js";
 import { RELAY_NAME, UsageError, parseRelayArgs, runRelay } from "./relay.js";
 
 /** Replaced with the package version by the build (scripts/lib/bundle.ts). */

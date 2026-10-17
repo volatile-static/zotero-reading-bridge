@@ -1,6 +1,6 @@
 /**
- * End to end through the Claude Desktop relay the way Claude Desktop runs it: the official MCP SDK client with a stdio
- * transport spawns the relay entry point (packages/claude-desktop/src/main.ts, under tsx) as a child process, and the
+ * End to end through the shared relay the way the desktop clients run it: the official MCP SDK client with a stdio
+ * transport spawns the relay entry point (shared/relay/main.ts, under tsx) as a child process, and the
  * relay talks HTTP to the Zotero-like server.
  */
 import assert from "node:assert/strict";
@@ -13,7 +13,7 @@ import { fakeRegistry } from "../fixtures/fake-registry.js";
 import { TEST_SERVER_VERSION, startZoteroLikeServer, type ZoteroLikeServer } from "./helpers/zotero-like-server.js";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
-const RELAY_ENTRY = path.join(REPO_ROOT, "packages", "claude-desktop", "src", "main.ts");
+const RELAY_ENTRY = path.join(REPO_ROOT, "shared", "relay", "main.ts");
 
 function relayTransport(port: number): StdioClientTransport {
   return new StdioClientTransport({

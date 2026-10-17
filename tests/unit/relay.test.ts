@@ -1,5 +1,5 @@
 /**
- * The Claude Desktop stdio <-> HTTP relay (packages/claude-desktop/src/relay.ts): argument parsing (loopback only),
+ * The shared stdio <-> HTTP relay (shared/relay/relay.ts): argument parsing (loopback only),
  * line framing, response forwarding, synthesized errors for an unreachable Zotero, and the exact request headers.
  */
 import assert from "node:assert/strict";
@@ -16,7 +16,7 @@ import {
   runRelay,
   type HttpResult,
   type PostRequest,
-} from "../../packages/claude-desktop/src/relay.js";
+} from "../../shared/relay/relay.js";
 
 describe("parseRelayArgs", () => {
   it("defaults to Zotero's port and accepts --port in both spellings", () => {

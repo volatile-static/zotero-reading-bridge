@@ -16,10 +16,10 @@ zotero-reading-bridge-pref-copy-address =
 zotero-reading-bridge-pref-port-note = 这里始终显示 Zotero 实际使用的端口。修改 Zotero HTTP 服务器端口需要重启 Zotero，并同步更新各客户端的配置。
 
 zotero-reading-bridge-pref-clients-heading = 连接 AI 客户端
-zotero-reading-bridge-pref-codex-description = Codex 桌面版：在 Plugins → Add → New Plugin 中拖入 zotero-reading-bridge-desktop.zip。
+zotero-reading-bridge-pref-codex-description = Codex 桌面版：在 Plugins → Add → New Plugin 中拖入 zotero-reading-bridge-codex.zip。
 zotero-reading-bridge-pref-claude-description = Claude 桌面版：在设置 → 扩展中拖入 zotero-reading-bridge-claude-desktop.mcpb。
 zotero-reading-bridge-pref-copied = 已复制到剪贴板。
 
 zotero-reading-bridge-pref-security-heading = 安全
-zotero-reading-bridge-pref-security-note = 该端点只监听本机（127.0.0.1），并且是只读的：不会修改你的文献库。它没有密码，因此在开启期间，本机上运行的任何程序都可以读取你的 Zotero 文献库、笔记和附件文件路径。AI 客户端也无法确认连接的确实是 Zotero：Zotero 未运行时，本机其他程序或其他用户可以占用这个端口，并通过客户端的钩子把指令注入每一条消息。在多人共用的电脑上，请不要安装 Codex 或 Claude Code 客户端插件。要关闭端点，请在「工具 → 插件」中禁用 Zotero Reading Bridge。
+zotero-reading-bridge-pref-security-note = 该端点只监听本机（127.0.0.1），并且是只读的：不会修改你的文献库。它没有密码，因此在开启期间，本机上运行的任何程序都可以读取你的 Zotero 文献库、笔记和附件文件路径。AI 客户端也无法确认连接的确实是 Zotero：Zotero 未运行时，本机其他程序或其他用户可以占用这个端口，并通过客户端的钩子把指令注入每一条消息。在多人共用的电脑上，请不要安装 Codex 或 Claude 桌面版客户端插件。要关闭端点，请在「工具 → 插件」中禁用 Zotero Reading Bridge。
 zotero-reading-bridge-pref-debug-note = 开启 Zotero 的调试输出日志时，Zotero 自身会记录收到的请求，并在工具运行时记录附件的路径和文件名、数据库查询的参数（如条目网址、检索词）以及全文检索词。使用 AI 客户端期间请关闭调试输出；提交调试输出前请先检查并删除这些内容。

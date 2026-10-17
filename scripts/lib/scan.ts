@@ -138,7 +138,7 @@ export function nodeRequireProblems(code: string): string[] {
 }
 
 /**
- * The Claude Desktop relay must stay a pipe-to-loopback client (architecture.md, design decision 22): it may not open a
+ * The shared relay must stay a pipe-to-loopback client (architecture.md, design decision 22): it may not open a
  * listening socket, may not set an Origin header, and must name 127.0.0.1 as its target.
  */
 export function relayBundleProblems(code: string): string[] {

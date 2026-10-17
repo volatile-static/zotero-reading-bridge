@@ -84,9 +84,9 @@ export async function bundleClassicScript(root: string, spec: BundleSpec): Promi
 }
 
 /**
- * Bundle a Node command-line program (the Claude Desktop relay) into one self-contained CommonJS file: CommonJS so that
+ * Bundle a Node command-line program (the shared relay) into one self-contained CommonJS file: CommonJS so that
  * `node <file>.js` runs it without a package.json beside it, Node built-ins only (anything else is an error, because the
- * .mcpb ships no node_modules). `version` replaces the `__RELAY_VERSION__` identifier.
+ * plugins ship no node_modules). `version` replaces the `__RELAY_VERSION__` identifier.
  */
 export async function bundleNodeScript(root: string, entry: string, target: string, version: string): Promise<string> {
   const code = singleOutput(

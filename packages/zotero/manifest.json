@@ -1,9 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Zotero Reading Bridge",
-  "version": "0.2.0",
-  "description": "Read-only local MCP endpoint that lets AI clients such as Codex and Claude Code read your Zotero library and current selection.",
-  "author": "volatile-static",
+  "description": "Read-only local MCP endpoint that lets AI clients such as Codex and Claude Desktop read your Zotero library and current selection.",
   "icons": {
     "48": "content/icons/icon.svg",
     "96": "content/icons/icon.svg"

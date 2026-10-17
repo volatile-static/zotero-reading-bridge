@@ -8,14 +8,18 @@ import {
   ENDPOINT_PATH,
   ENDPOINT_PATHS,
   ZOTERO_ADDON_ID,
-  endpointUrl,
 } from "../../shared/types/bridge.js";
-import { CLIENT_SERVER_NAMES, PLUGIN_NAME } from "../../shared/types/hook.js";
+import { CODEX_SERVER_NAME } from "../../shared/types/hook.js";
 import type { ToolName } from "../../shared/types/tool-names.js";
 import { errorMessage } from "./cli.js";
 import {
-  DESKTOP_RELAY_OUT,
+  CODEX_MCP_CONFIG,
+  CODEX_PLUGIN,
+  CODEX_PORTABLE_MANIFEST,
+  CODEX_PORTABLE_MCP_CONFIG,
+  DESKTOP_PLUGIN,
   DESKTOP_REQUIRED_FILES,
+  RELAY_OUT,
   ENDPOINT_METHODS,
   ENDPOINT_MODULE,
   MAIN_GLOBAL_NAME,
@@ -27,7 +31,7 @@ import {
   XPI_REQUIRED_FILES,
   ZOTERO_BUNDLES,
 } from "./layout.js";
-import { isRecord, parseFrontmatter } from "./manifests.js";
+import { type PackageMetadata, isRecord, parseFrontmatter, portableCodexManifest, portableMcpConfig } from "./manifests.js";
 import { relayBundleProblems, scanBundle } from "./scan.js";
 import { createSandbox, inertStub, missingFunctions } from "./script-globals.js";
 
@@ -67,7 +71,6 @@ export function readJsonObject(files: FileMap, name: string): Record<string, unk
   return value;
 }
 
-const CANONICAL_URL = endpointUrl(DEFAULT_ZOTERO_PORT, ENDPOINT_PATH);
 
 export function zoteroManifestProblems(manifest: Record<string, unknown>, version: string): string[] {
   const problems: string[] = [];
@@ -462,8 +465,8 @@ export function hookFileProblems(hooksFile: Record<string, unknown>, expected: H
   return problems;
 }
 
-/** Problems with the one HTTP server a client plugin's .mcp.json must declare. */
-export function mcpConfigProblems(mcp: Record<string, unknown>, serverKey: string, client: "codex" | "claude-code", desktop = false): string[] {
+/** Codex's .mcp.json: exactly one server, launching the packaged relay over stdio with node. */
+export function mcpConfigProblems(mcp: Record<string, unknown>, serverKey: string): string[] {
   const servers = mcp["mcpServers"];
   if (!isRecord(servers)) return [`"mcpServers" must be an object`];
   const keys = Object.keys(servers);
@@ -473,23 +476,18 @@ export function mcpConfigProblems(mcp: Record<string, unknown>, serverKey: strin
   const server = servers[serverKey];
   if (!isRecord(server)) return [`mcpServers.${serverKey} must be an object`];
   const problems: string[] = [];
-  if (desktop) {
-    if (server["type"] !== "stdio" || server["command"] !== "node" || server["cwd"] !== "${PLUGIN_ROOT}" ||
-        JSON.stringify(server["args"]) !== JSON.stringify(["${PLUGIN_ROOT}/server/zotero-relay.js"]) || "url" in server) {
-      problems.push("desktop MCP must launch the packaged stdio relay with node");
-    }
-  } else {
-    if (server["type"] !== "http") problems.push(`mcpServers.${serverKey}.type must be "http"`);
-    if (server["url"] !== CANONICAL_URL) problems.push(`mcpServers.${serverKey}.url must be ${CANONICAL_URL}`);
+  if (server["type"] !== "stdio" || server["command"] !== "node" || server["cwd"] !== "${PLUGIN_ROOT}" ||
+      JSON.stringify(server["args"]) !== JSON.stringify(CODEX_RELAY_ARGS) || "url" in server) {
+    problems.push(`mcpServers.${serverKey} must run node ${CODEX_RELAY_ARGS.join(" ")} over stdio in \${PLUGIN_ROOT}`);
   }
-  if (client === "codex") {
-    // The shipped plugin must not relax Codex's approval policy or embed a literal credential.
-    for (const key of ["default_tools_approval_mode", "bearer_token"]) {
-      if (key in server) problems.push(`mcpServers.${serverKey}.${key} must not be set`);
-    }
+  // The shipped plugin must not relax Codex's approval policy or embed a literal credential.
+  for (const key of ["default_tools_approval_mode", "bearer_token", "env"]) {
+    if (key in server) problems.push(`mcpServers.${serverKey}.${key} must not be set`);
   }
   return problems;
 }
+
+const CODEX_RELAY_ARGS = ["${PLUGIN_ROOT}/" + RELAY_OUT];
 
 export function skillProblems(files: FileMap, skillPath: string = SKILL_FILE): string[] {
   const frontmatter = parseFrontmatter(readText(files, skillPath));
@@ -519,40 +517,48 @@ function manifestPathProblems(manifest: Record<string, unknown>, files: FileMap,
   return problems;
 }
 
-function pluginIdentityProblems(manifest: Record<string, unknown>, version: string): string[] {
+/** The fields package.json supplies to every client manifest (see injectMetadata). */
+function sharedMetadataProblems(manifest: Record<string, unknown>, meta: PackageMetadata): string[] {
   const problems: string[] = [];
-  if (manifest["name"] !== PLUGIN_NAME) problems.push(`name must be "${PLUGIN_NAME}"`);
-  if (manifest["version"] !== version) problems.push(`version must be ${version} (got ${JSON.stringify(manifest["version"])})`);
+  if (manifest["name"] !== meta.name) problems.push(`name must be "${meta.name}"`);
+  if (manifest["version"] !== meta.version) problems.push(`version must be ${meta.version} (got ${JSON.stringify(manifest["version"])})`);
+  const author = manifest["author"];
+  if (!isRecord(author) || author["name"] !== meta.author) problems.push(`author.name must be "${meta.author}"`);
+  if (manifest["license"] !== meta.license) problems.push(`license must be ${meta.license}`);
+  if (JSON.stringify(manifest["keywords"]) !== JSON.stringify(meta.keywords)) problems.push("keywords must match package.json");
   return problems;
 }
 
-export function codexPackageChecks(files: FileMap, version: string, desktop = false): CheckResult[] {
-  const serverKey = CLIENT_SERVER_NAMES.codex;
+export function codexPackageChecks(files: FileMap, meta: PackageMetadata): CheckResult[] {
+  const serverKey = CODEX_SERVER_NAME;
   return [
-    runCheck(".codex-plugin/plugin.json identity and paths", () => {
-      const manifest = readJsonObject(files, ".codex-plugin/plugin.json");
+    runCheck(`${CODEX_PLUGIN.manifest} metadata, local executor and paths`, () => {
+      const manifest = readJsonObject(files, CODEX_PLUGIN.manifest);
       const ui = manifest["interface"];
       return [
-        ...pluginIdentityProblems(manifest, version),
+        ...sharedMetadataProblems(manifest, meta),
+        ...(manifest["requires_local_executor"] === true ? [] : ["requires_local_executor must be true (the relay runs locally)"]),
         ...manifestPathProblems(manifest, files, ["skills", "mcpServers", "hooks"]),
         ...(isRecord(ui) ? manifestPathProblems(ui, files, ["composerIcon", "logo"]).map((p) => `interface.${p}`) : []),
       ];
     }),
-    runCheck(`.mcp.json declares ${serverKey}`, () => mcpConfigProblems(readJsonObject(files, ".mcp.json"), serverKey, "codex", desktop)),
-    ...(desktop ? [runCheck("portable desktop manifest, MCP, relay and no marketplace", () => {
-      const manifest = readJsonObject(files, "plugin.json");
-      const overlay = readJsonObject(files, ".codex-plugin/plugin.json");
-      const mcp = readJsonObject(files, "mcp.json");
-      const problems = [...pluginIdentityProblems(manifest, version), ...mcpConfigProblems(mcp, serverKey, "codex", true)];
-      const extensions = manifest["extensions"];
-      const openai = isRecord(extensions) ? extensions["com.openai"] : undefined;
-      if (!isRecord(openai) || openai["requires_local_executor"] !== true || overlay["requires_local_executor"] !== true) problems.push("desktop execution must be declared");
-      if (manifest["$schema"] !== "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json" || mcp["$schema"] !== "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json") problems.push("portable schema declarations are missing");
-      if (readJsonObject(files, "server/package.json")["type"] !== "commonjs") problems.push("relay must use CommonJS");
-      if (!files.has(DESKTOP_RELAY_OUT)) problems.push("missing relay");
-      if ([...files.keys()].some((name) => name.endsWith("marketplace.json"))) problems.push("desktop archive must not include a marketplace");
+    runCheck(`${CODEX_MCP_CONFIG} launches the relay as ${serverKey}`, () => mcpConfigProblems(readJsonObject(files, CODEX_MCP_CONFIG), serverKey)),
+    runCheck(`${CODEX_PORTABLE_MANIFEST} and ${CODEX_PORTABLE_MCP_CONFIG} are derived from Codex's own files`, () => {
+      const problems: string[] = [];
+      const portable = readJsonObject(files, CODEX_PORTABLE_MANIFEST);
+      if (JSON.stringify(portable) !== JSON.stringify(portableCodexManifest(readJsonObject(files, CODEX_PLUGIN.manifest)))) {
+        problems.push(`${CODEX_PORTABLE_MANIFEST} differs from the one derived from ${CODEX_PLUGIN.manifest}`);
+      }
+      const mcp = readJsonObject(files, CODEX_PORTABLE_MCP_CONFIG);
+      if (JSON.stringify(mcp) !== JSON.stringify(portableMcpConfig(readJsonObject(files, CODEX_MCP_CONFIG)))) {
+        problems.push(`${CODEX_PORTABLE_MCP_CONFIG} differs from the one derived from ${CODEX_MCP_CONFIG}`);
+      }
       return problems;
-    })] : []),
+    }),
+    runCheck(`${RELAY_OUT} runs as CommonJS`, () => [
+      ...(files.has(RELAY_OUT) ? [] : [`missing ${RELAY_OUT}`]),
+      ...(readJsonObject(files, "server/package.json")["type"] === "commonjs" ? [] : [`server/package.json must declare "type": "commonjs"`]),
+    ]),
     runCheck("hooks/hooks.json UserPromptSubmit hook", () =>
       hookFileProblems(readJsonObject(files, "hooks/hooks.json"), {
         server: serverKey,
@@ -564,63 +570,25 @@ export function codexPackageChecks(files: FileMap, version: string, desktop = fa
   ];
 }
 
-export function claudeCodePackageChecks(files: FileMap, version: string): CheckResult[] {
-  const serverKey = CLIENT_SERVER_NAMES.claudeCode;
-  return [
-    runCheck(".claude-plugin/plugin.json identity", () => {
-      const manifest = readJsonObject(files, ".claude-plugin/plugin.json");
-      const problems = pluginIdentityProblems(manifest, version);
-      // Declaring these would replace (not merge with) the default hooks/hooks.json and .mcp.json.
-      for (const key of ["hooks", "mcpServers"]) {
-        if (key in manifest) problems.push(`must not declare "${key}"`);
-      }
-      return problems;
-    }),
-    runCheck(`.mcp.json declares ${serverKey}`, () =>
-      mcpConfigProblems(readJsonObject(files, ".mcp.json"), serverKey, "claude-code"),
-    ),
-    runCheck("hooks/hooks.json UserPromptSubmit hook", () => {
-      const manifest = readJsonObject(files, ".claude-plugin/plugin.json");
-      const derived = `plugin:${String(manifest["name"])}:${serverKey}`;
-      const problems =
-        derived === CLIENT_SERVER_NAMES.claudeCodeHookServer
-          ? []
-          : [`hook server ${CLIENT_SERVER_NAMES.claudeCodeHookServer} does not match plugin:<name>:<server key> = ${derived}`];
-      return [
-        ...problems,
-        ...hookFileProblems(readJsonObject(files, "hooks/hooks.json"), {
-          server: CLIENT_SERVER_NAMES.claudeCodeHookServer,
-          input: { client: "claude-code", session_id: "${session_id}", prompt_id: "${prompt_id}" },
-          requireDescription: false,
-        }),
-      ];
-    }),
-    runCheck(`${SKILL_FILE} front matter`, () => skillProblems(files)),
-  ];
-}
-
-const DESKTOP_RELAY_ARGS = ["${__dirname}/" + DESKTOP_RELAY_OUT, "--port", "${user_config.port}"];
+const DESKTOP_RELAY_ARGS = ["${__dirname}/" + RELAY_OUT, "--port", "${user_config.port}"];
 
 /**
  * The .mcpb manifest: a node server whose entry point is the shipped relay, launched with exactly
  * `node ${__dirname}/<relay> --port ${user_config.port}` (no host argument, no environment: the relay's target is
  * fixed to 127.0.0.1), and an optional numeric port defaulting to Zotero's.
  */
-export function desktopManifestProblems(manifest: Record<string, unknown>, files: FileMap, version: string): string[] {
+export function desktopManifestProblems(manifest: Record<string, unknown>, files: FileMap, meta: PackageMetadata): string[] {
   const problems: string[] = [];
   if (typeof manifest["manifest_version"] !== "string") problems.push("manifest_version must be a string");
-  if (manifest["name"] !== PLUGIN_NAME) problems.push(`name must be "${PLUGIN_NAME}"`);
-  if (manifest["version"] !== version) problems.push(`version must be ${version} (got ${JSON.stringify(manifest["version"])})`);
+  problems.push(...sharedMetadataProblems(manifest, meta));
   for (const key of ["display_name", "description"]) {
     if (typeof manifest[key] !== "string" || !manifest[key]) problems.push(`${key} must be a non-empty string`);
   }
-  const author = manifest["author"];
-  if (!isRecord(author) || typeof author["name"] !== "string" || !author["name"]) problems.push("author.name is required");
   const server = manifest["server"];
   if (!isRecord(server)) return [...problems, "server is missing"];
   if (server["type"] !== "node") problems.push(`server.type must be "node"`);
-  if (server["entry_point"] !== DESKTOP_RELAY_OUT) problems.push(`server.entry_point must be ${DESKTOP_RELAY_OUT}`);
-  else if (!files.has(DESKTOP_RELAY_OUT)) problems.push(`server.entry_point ${DESKTOP_RELAY_OUT} is not in the package`);
+  if (server["entry_point"] !== RELAY_OUT) problems.push(`server.entry_point must be ${RELAY_OUT}`);
+  else if (!files.has(RELAY_OUT)) problems.push(`server.entry_point ${RELAY_OUT} is not in the package`);
   const config = server["mcp_config"];
   if (!isRecord(config)) return [...problems, "server.mcp_config is missing"];
   if (config["command"] !== "node") problems.push(`server.mcp_config.command must be "node"`);
@@ -643,7 +611,8 @@ export function desktopManifestProblems(manifest: Record<string, unknown>, files
   return problems;
 }
 
-export function claudeDesktopPackageChecks(files: FileMap, version: string): CheckResult[] {
+export function claudeDesktopPackageChecks(files: FileMap, meta: PackageMetadata): CheckResult[] {
+  const version = meta.version;
   return [
     runCheck(`exactly ${DESKTOP_REQUIRED_FILES.join(", ")}`, () => {
       const expected = new Set<string>(DESKTOP_REQUIRED_FILES);
@@ -653,13 +622,13 @@ export function claudeDesktopPackageChecks(files: FileMap, version: string): Che
       ];
     }),
     runCheck("manifest.json: node server, relay args, port option", () =>
-      desktopManifestProblems(readJsonObject(files, "manifest.json"), files, version),
+      desktopManifestProblems(readJsonObject(files, DESKTOP_PLUGIN.manifest), files, meta),
     ),
-    runCheck(`${DESKTOP_RELAY_OUT}: node: built-ins only, no listening socket, no Origin, 127.0.0.1 target`, () =>
-      relayBundleProblems(readText(files, DESKTOP_RELAY_OUT)),
+    runCheck(`${RELAY_OUT}: node: built-ins only, no listening socket, no Origin, 127.0.0.1 target`, () =>
+      relayBundleProblems(readText(files, RELAY_OUT)),
     ),
-    runCheck(`${DESKTOP_RELAY_OUT} reports version ${version}`, () =>
-      readText(files, DESKTOP_RELAY_OUT).includes(JSON.stringify(version)) ? [] : ["version string not found in the bundle"],
+    runCheck(`${RELAY_OUT} reports version ${version}`, () =>
+      readText(files, RELAY_OUT).includes(JSON.stringify(version)) ? [] : ["version string not found in the bundle"],
     ),
   ];
 }

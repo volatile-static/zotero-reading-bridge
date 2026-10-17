@@ -2,18 +2,24 @@
   "name": "zotero-reading-bridge",
   "version": "0.2.0",
   "private": true,
-  "description": "Zotero Reading Bridge: read-only Zotero MCP endpoint plus Codex and Claude Code client plugins",
+  "description": "Zotero Reading Bridge: read-only Zotero MCP endpoint plus Codex and Claude Desktop plugins",
   "license": "GPL-3.0-or-later",
   "author": "volatile-static",
+  "keywords": [
+    "zotero",
+    "research",
+    "citations",
+    "pdf",
+    "mcp"
+  ],
   "type": "module",
   "engines": {
     "node": ">=22.12"
   },
   "scripts": {
-    "typecheck": "tsc -p packages/zotero/tsconfig.json && tsc -p packages/zotero/content/tsconfig.json && tsc -p scripts/tsconfig.json && tsc -p tests/tsconfig.json && tsc -p tests/zotero/seed-plugin/tsconfig.json && tsc -p packages/claude-desktop/tsconfig.json",
-    "test": "node --import tsx --test \"tests/unit/**/*.test.ts\" \"tests/protocol/**/*.test.ts\" \"tests/clients/**/*.test.ts\" \"tests/zotero/*.test.ts\"",
+    "typecheck": "tsx scripts/typecheck.ts",
+    "test": "node --import tsx --test \"tests/unit/**/*.test.ts\" \"tests/protocol/**/*.test.ts\" \"tests/zotero/*.test.ts\"",
     "build": "tsx scripts/build.ts",
-    "package:desktop-plugin": "npm run build",
     "verify": "tsx scripts/verify-package.ts",
     "test:zotero": "tsx tests/zotero/run.ts"
   },

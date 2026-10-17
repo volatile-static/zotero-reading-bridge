@@ -328,7 +328,7 @@ Connector 从浏览器已加载的页面启动识别与保存；Bridge 仅传入
 
 ## 要求与已知限制
 
-- Zotero 11（含 11.0 beta）；开发与测试使用 Zotero 11.0-beta.1，Windows 11。
+- Zotero 10–11（含 11.0 beta）；Zotero 10 正式版尚未完成运行验证。开发与测试使用 Zotero 11.0-beta.1，Windows 11。
 - Codex CLI / 桌面版（插件、`mcp_tool` Hook）；在 codex-cli 0.162.0-alpha.17.2 上验证过插件识别。IDE 扩展不支持插件。
 - 修改 Zotero 的 HTTP 端口需要重启 Zotero，并同步修改客户端配置。
 - Codex：会话开始时 Zotero 必须已在运行（Hook 不会等待或重连服务器）；插件 Hook 必须信任，Hook 定义变化后需重新信任。

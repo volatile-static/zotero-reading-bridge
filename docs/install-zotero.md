@@ -7,7 +7,7 @@ Zotero Reading Bridge 的核心是一个 Zotero 插件。它在 Zotero 自带的
 
 | 项目 | 要求 |
 |---|---|
-| Zotero | Zotero 11（包括 11.0 beta）。插件清单声明 `strict_min_version: 10.999`、`strict_max_version: 11.*`，Zotero 10 及更早版本无法安装。开发与测试使用 Zotero 11.0-beta.1（Windows 11）。 |
+| Zotero | Zotero 10–11（包括 11.0 beta）。插件清单声明 `strict_min_version: 10.0`、`strict_max_version: 11.*`，Zotero 10 正式版尚未完成运行验证；Zotero 9 及更早版本无法安装。开发与测试使用 Zotero 11.0-beta.1（Windows 11）。 |
 | Zotero 内置 HTTP 服务器 | 必须开启（默认开启，首选项 `extensions.zotero.httpServer.enabled`）。 |
 | 端口 | Zotero 的端口首选项 `extensions.zotero.httpServer.port`，默认 23119。本插件只读取、不修改这个值。 |
 | 操作系统 | 与 Zotero 相同。端点只监听本机 IPv4 回环地址 `127.0.0.1`。 |

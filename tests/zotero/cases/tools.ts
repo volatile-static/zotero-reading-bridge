@@ -66,7 +66,7 @@ function lib(ctx: HarnessContext): number {
 export const toolCases: TestCase[] = [
   {
     id: "tools.get_status",
-    title: "get_status reports bridge, endpoints on the test port, Zotero 11 and the libraries",
+    title: "get_status reports bridge, endpoints on the test port, Zotero 10–11 and the libraries",
     requires: ["bridge", "fixtures"],
     async run(ctx) {
       const status = await ctx.mcp().tool("get_status");
@@ -100,7 +100,7 @@ export const toolCases: TestCase[] = [
       );
       assert.equal(status.bridge.requestPath, ENDPOINT_PATH);
       assert.equal(status.zotero.port, ctx.port);
-      assert.match(status.zotero.version, /^11\./);
+      assert.match(status.zotero.version, /^(10|11)\./);
       assert.equal(status.zotero.platform, "windows");
       assert.ok(status.libraries.some((l: any) => l.libraryID === lib(ctx) && l.type === "user"));
       assert.ok(!Number.isNaN(Date.parse(status.time)), "time");

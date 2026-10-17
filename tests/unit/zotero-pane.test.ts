@@ -92,12 +92,12 @@ describe("manifest.json", () => {
     applications: { zotero: Record<string, string> };
   };
 
-  it("declares the Zotero 11 application block (design decision 16)", () => {
+  it("declares the Zotero 10–11 application block (design decision 16)", () => {
     assert.equal(manifest.manifest_version, 2);
     assert.deepEqual(manifest.applications.zotero, {
       id: ZOTERO_ADDON_ID,
       update_url: "https://github.com/volatile-static/zotero-reading-bridge/releases/latest/download/updates.json",
-      strict_min_version: "10.999",
+      strict_min_version: "10.0",
       strict_max_version: "11.*",
     });
   });

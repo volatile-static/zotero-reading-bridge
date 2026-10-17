@@ -16,7 +16,7 @@ institution's subscriptions and network setup. Downloaded PDFs stay on Zotero's 
 
 ## What you need
 
-- **Zotero 11**
+- **Zotero >=10**
 - **Claude Desktop** or the **Codex** desktop app
 - Download the installation files from the [latest release](https://github.com/volatile-static/zotero-reading-bridge/releases/latest):
   - [Zotero plugin (.xpi)](https://github.com/volatile-static/zotero-reading-bridge/releases/latest/download/zotero-reading-bridge.xpi)

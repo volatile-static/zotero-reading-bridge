@@ -8,7 +8,7 @@ const manifest = {
   version: "0.2.2",
   applications: { zotero: {
     id: ZOTERO_ADDON_ID, update_url: ZOTERO_UPDATE_URL,
-    strict_min_version: "10.999", strict_max_version: "11.*",
+    strict_min_version: "10.0", strict_max_version: "11.*",
   } },
 };
 
@@ -18,7 +18,7 @@ test("update feed identifies the plugin and binds compatibility and hash to its 
   assert.equal(update.version, "0.2.2");
   assert.equal(update.update_link, "https://github.com/volatile-static/zotero-reading-bridge/releases/download/v0.2.2/zotero-reading-bridge.xpi");
   assert.equal(update.update_hash, `sha256:${createHash("sha256").update(bytes).digest("hex")}`);
-  assert.deepEqual(update.applications.zotero, { strict_min_version: "10.999", strict_max_version: "11.*" });
+  assert.deepEqual(update.applications.zotero, { strict_min_version: "10.0", strict_max_version: "11.*" });
   assert.notEqual(createUpdateManifest(manifest, Buffer.from("changed")).addons[ZOTERO_ADDON_ID]!.updates[0]!.update_hash, update.update_hash);
 });
 

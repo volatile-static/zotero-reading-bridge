@@ -9,7 +9,7 @@
       "name": "zotero-ai-bridge",
       "source": "./",
       "description": "Read-only access to your local Zotero library and the current Zotero selection, attached to every prompt.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     }
   ]
 }

@@ -161,7 +161,7 @@ I-C1 – I-C4：
 
 - `codex plugin marketplace add <插件目录>` 接受插件根目录内的 `.agents/plugins/marketplace.json` 和 `"path": "./"`，
   市场名 `zotero-ai-bridge-local`；目录路径含中文和空格时同样成功。
-- `codex plugin list --available --json` 显示 `zotero-ai-bridge@zotero-ai-bridge-local`，版本 0.1.0。
+- `codex plugin list --available --json` 显示 `zotero-ai-bridge@zotero-ai-bridge-local`，版本 0.2.0。
 - `codex plugin add zotero-ai-bridge@zotero-ai-bridge-local` 安装到缓存目录并启用；修改版本号后再次执行会安装新版本。
 - `codex mcp list --json` 显示服务器 `zotero_bridge`（streamable_http，`startup_timeout_sec` 10，`tool_timeout_sec` 30）。
 - `codex debug prompt-input` 的技能列表中出现 `zotero-ai-bridge:zotero`。

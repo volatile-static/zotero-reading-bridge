@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Zotero AI Bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Read-only local MCP endpoint that lets AI clients such as Codex and Claude Code read your Zotero library and current selection.",
   "author": "Zotero AI Bridge contributors",
   "icons": {

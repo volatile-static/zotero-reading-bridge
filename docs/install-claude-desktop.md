@@ -153,7 +153,7 @@ Claude 桌面应用没有 Codex / Claude Code 那样的 `UserPromptSubmit` Hook�
 | 看到两套相同的 Zotero 工具 | 同时安装了扩展和手动配置 | 二选一，删除其中一个 |
 
 日志位置：Windows `%APPDATA%\Claude\logs\`，macOS `~/Library/Logs/Claude/`，文件名形如 `mcp-server-<服务器名>.log`。中继的行以
-`[zotero-ai-bridge-relay]` 开头，例如 `0.1.0: stdio <-> http://127.0.0.1:23119/bridge/mcp`、`tools/call -> 200`。其他问题见
+`[zotero-ai-bridge-relay]` 开头，例如 `0.2.0: stdio <-> http://127.0.0.1:23119/bridge/mcp`、`tools/call -> 200`。其他问题见
 [troubleshooting.md](troubleshooting.md)。
 
 ## 7. 运行方式与安全说明

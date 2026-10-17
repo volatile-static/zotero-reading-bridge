@@ -63,6 +63,31 @@ function median(values: number[]): number {
 
 export const contextCases: TestCase[] = [
   {
+    id: "context.virtual-views",
+    title: "Current-view listing supports library roots and virtual views without item selection",
+    requires: ["bridge", "fixtures"],
+    async run(ctx) {
+      await resetUi(ctx);
+      const root = await ctx.mcp().tool("get_current_view_items", {}) as any;
+      assert.equal(root.view.rows[0].type, "library");
+      assert.ok(root.total > 0);
+      const results = [];
+      for (const type of ["recentlyRead", "publications", "unfiled", "duplicates", "trash", "feeds"] as const) {
+        const selected = await ctx.seed.ui({ action: "selectView", type });
+        if (!selected.feasible) {
+          results.push({ type, unavailableInFixture: selected.reason });
+          continue;
+        }
+        const view = await ctx.mcp().tool("get_current_view_items", {}) as any;
+        assert.equal(view.view.rows[0].type, type);
+        assert.ok(Array.isArray(view.items));
+        assert.ok(view.total >= view.items.length);
+        results.push({ type, total: view.total });
+      }
+      return results;
+    },
+  },
+  {
     id: "context.empty",
     title: "Library root selected, nothing else: status empty, focus none, no reader",
     requires: ["bridge", "fixtures"],
@@ -131,9 +156,21 @@ export const contextCases: TestCase[] = [
       assert.deepEqual(col.libraryView?.collections.map((c) => c.key), [fixtureKey(ctx, "col-child")]);
       assert.equal(col.libraryView?.collections[0]?.parentKey, fixtureKey(ctx, "col-root"));
       assert.equal(col.status, "ok");
+      const view = await ctx.mcp().tool("get_current_view_items", { limit: 1 }) as any;
+      assert.equal(view.view.rows[0].type, "collection");
+      assert.ok(view.total > 0);
+      assert.equal(view.items.length, 1);
       await ctx.seed.ui({ action: "selectSavedSearch", libraryID, key: fixtureKey(ctx, "search-fixture-tag") });
       const search = await snapshot(ctx);
       assert.deepEqual(search.libraryView?.savedSearches.map((s) => s.key), [fixtureKey(ctx, "search-fixture-tag")]);
+      const searchView = await ctx.mcp().tool("get_current_view_items", {}) as any;
+      assert.equal(searchView.view.rows[0].type, "search");
+      assert.ok(searchView.total > 0);
+      if (view.nextCursor) {
+        const continued = await ctx.mcp().tool("get_current_view_items", { cursor: view.nextCursor }) as any;
+        assert.equal(continued.view.rows[0].type, "collection");
+        assert.equal(continued.total, view.total);
+      }
       const group = requireManifest(ctx).group;
       if (group) {
         await ctx.seed.ui({ action: "selectLibrary", libraryID: group.libraryID });

@@ -30,6 +30,7 @@ import { attachmentHandlers } from "./tools/attachments.js";
 import { collectionHandlers } from "./tools/collections.js";
 import { contentHandlers } from "./tools/content.js";
 import { contextHandlers } from "./tools/context.js";
+import { currentViewHandlers } from "./tools/current-view.js";
 import { itemHandlers } from "./tools/items.js";
 import { libraryHandlers } from "./tools/libraries.js";
 import { buildRegistry } from "./tools/registry.js";
@@ -135,6 +136,7 @@ class BridgeRuntime {
     return {
       ...createStatusHandlers(() => this.getState()),
       ...contextHandlers,
+      ...currentViewHandlers,
       ...libraryHandlers,
       ...collectionHandlers,
       ...itemHandlers,

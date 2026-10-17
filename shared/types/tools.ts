@@ -96,7 +96,7 @@ export interface ItemSummary extends ItemRef {
   parentKey: string | null;
   dateAdded: string;
   dateModified: string;
-  /** zotero://select URI for the item. */
+  /** zotero://select URI for the item; empty for feeds (cite libraryID + key instead). */
   uri: string;
   childCounts?: { notes: number; attachments: number };
 }

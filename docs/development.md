@@ -2,6 +2,8 @@
 
 面向开发者的中文说明。面向用户的英文安装指南见 [README](../README.md)。
 
+Zotero 官方参考：[Zotero 11 for developers](https://www.zotero.org/support/dev/zotero_11_for_developers)。升级 Zotero API 或适配界面视图时优先核对这份迁移文档。
+
 项目与发布包名称为 `zotero-reading-bridge`。新版使用新的插件 ID，不兼容旧安装；请先移除旧的 Zotero AI Bridge 及其客户端插件，再安装新版。
 
 让 Codex 和 Claude 桌面应用**只读**访问本机 Zotero：检索文献、读取元数据、全文、笔记和批注。Codex 在宿主支持并信任 Hook 时自动附加当前选择；Claude 桌面版按需获取当前选择。
@@ -14,7 +16,7 @@ Codex / Claude 桌面版 → stdio 中继 → 本机 HTTP → Zotero Bridge → 
 
 | 组件 | 源码 | 构建产物 | 作用 |
 |---|---|---|---|
-| Zotero 插件 | `packages/zotero/` | `outputs/zotero-reading-bridge.xpi` | 在 Zotero 自带的本机 HTTP 服务器上提供 MCP 端点 `http://127.0.0.1:23119/bridge/mcp`，19 个只读工具 |
+| Zotero 插件 | `packages/zotero/` | `outputs/zotero-reading-bridge.xpi` | 在 Zotero 自带的本机 HTTP 服务器上提供 MCP 端点 `http://127.0.0.1:23119/bridge/mcp`，20 个只读工具 |
 | Codex 桌面插件 | `packages/codex/` | `outputs/zotero-reading-bridge-codex.zip` | 拖拽导入；内置中继、技能及 `UserPromptSubmit` 上下文 Hook |
 | Claude 桌面应用扩展 | `packages/claude-desktop/` | `outputs/zotero-reading-bridge-claude-desktop.mcpb` | 拖拽导入；供 Claude 桌面版聊天与 Cowork 使用，无 Hook，按需调用 `get_current_context` |
 | Claude 桌面应用 skill | `packages/claude-skill/` | `outputs/SKILL.md` | MCPB 无法携带 skill，故单独输出一个不压缩的 `SKILL.md`（展开共享说明）；在 **设置 → Capabilities → Skills** 上传 |
@@ -60,7 +62,7 @@ Codex / Claude 桌面版 → stdio 中继 → 本机 HTTP → Zotero Bridge → 
 |---|---|---|
 | `initialize` | 通常传 `protocolVersion`、`capabilities`、`clientInfo` | 返回 `protocolVersion`、`capabilities.tools.listChanged: false`、`serverInfo` 和 `instructions`；请求版本受支持时原样采用，否则返回 `2025-11-25` 供客户端判断 |
 | `ping` | 省略或 `{}` | `{}` |
-| `tools/list` | 省略或 `{}` | `{tools: [...]}`，一次返回全部 19 个工具及 `inputSchema`、`annotations`，没有后续页 |
+| `tools/list` | 省略或 `{}` | `{tools: [...]}`，一次返回全部 20 个工具及 `inputSchema`、`annotations`，没有后续页 |
 | `tools/call` | `{name: "工具名", arguments: {...}}`；省略 `arguments` 相当于 `{}` | MCP `CallToolResult`，见下文 |
 | `notifications/initialized` 等通知 | 不带 `id` | HTTP 202、空响应；不执行工具调用 |
 | `server/discover` | 探测请求 | HTTP 400，JSON-RPC `-32601`，保留请求 id；客户端应回退到 `initialize` |
@@ -79,8 +81,9 @@ Codex / Claude 桌面版 → stdio 中继 → 本机 HTTP → Zotero Bridge → 
 |---|---|---|
 | `get_status` | 无 | Bridge / Zotero 版本、endpoint、协议版本和文献库状态 |
 | `get_current_context` | `maxTextLength`（默认 4000，0–20000） | 带时间戳的当前界面快照；选中的图片批注另附图像状态及图片 |
+| `get_current_view_items` | 分页 | 当前文库标签页的实际条目列表，支持文库根目录、集合、保存搜索及全部特殊视图（包括订阅源）；保留筛选、排序与展开子条目。游标固定初次列表两分钟（最多三份），省略游标重新读取；条目元数据在各页返回时读取 |
 | `capture_prompt_context` | **`client`**、`session_id`、`turn_id`、`prompt_id` | Hook JSON：`hookSpecificOutput.additionalContext`；仅供客户端 Hook 使用 |
-| `list_libraries` | 分页 | 个人库与群组库，排除 feeds |
+| `list_libraries` | 分页 | 个人库、群组库与订阅源库 |
 | `list_collections` | `libraryID`、`parentKey`、`recursive`（默认 false）、`includeItemCounts`（默认 true）、分页 | 集合层级及条目数量 |
 | `get_collection` | **`key`**、`libraryID`、`includeItems`（默认 true）、分页 | 集合路径、最多 50 个直接子集合及条目分页；更多子集合用 `list_collections` |
 | `list_saved_searches` | `libraryID`、分页 | 已保存搜索及条件摘要 |

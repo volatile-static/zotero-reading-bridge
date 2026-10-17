@@ -288,6 +288,14 @@ async function perform(win: any, request: UiAction): Promise<ActionOutcome> {
       }
       await clearItemSelection(win);
       return DONE;
+    case "selectView": {
+      await showLibraryTab(win);
+      const tree = win.ZoteroPane.collectionsView;
+      const row = tree._rows.find((row: any) => row.type === request.type);
+      if (!row) return { feasible: false, reason: `View ${request.type} is not present`, method: null };
+      await selectTreeRow(win, row.id);
+      return DONE;
+    }
     case "selectCollection": {
       const col = Zotero.Collections.getByLibraryAndKey(request.libraryID, request.key) as Zotero.Collection | false;
       if (!col) throw new Error(`Collection ${request.key} not found`);

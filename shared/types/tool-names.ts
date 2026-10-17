@@ -6,6 +6,7 @@
 export const TOOL_NAMES = [
   "get_status",
   "get_current_context",
+  "get_current_view_items",
   "capture_prompt_context",
   "list_libraries",
   "list_collections",

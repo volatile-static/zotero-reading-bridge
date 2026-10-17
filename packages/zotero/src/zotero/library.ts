@@ -20,12 +20,12 @@ export function listNonFeedLibraries(): ZLibrary[] {
   return (Zotero.Libraries.getAll() as ZLibrary[]).filter((lib) => !isFeedLibrary(lib));
 }
 
-/** Resolve an optional libraryID argument (default: personal library). Feeds are treated as not found. */
+/** Resolve an optional libraryID argument (default: personal library). Feed libraries are supported too. */
 export function resolveLibrary(libraryID?: unknown): ZLibrary {
   const id = typeof libraryID === "number" ? libraryID : Zotero.Libraries.userLibraryID;
   const lib = Zotero.Libraries.get(id) as ZLibrary | false;
-  if (!lib || isFeedLibrary(lib)) {
-    throw new ToolError("LIBRARY_NOT_FOUND", `No library with libraryID ${id} (feeds are not supported)`, { libraryID: id });
+  if (!lib) {
+    throw new ToolError("LIBRARY_NOT_FOUND", `No library with libraryID ${id}`, { libraryID: id });
   }
   return lib;
 }

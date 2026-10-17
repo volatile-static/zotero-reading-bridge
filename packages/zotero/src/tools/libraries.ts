@@ -4,7 +4,7 @@
  */
 import type { ToolName } from "../../../../shared/types/tool-names.js";
 import type { LibraryInfo } from "../../../../shared/types/tools.js";
-import { itemsLoaded, listNonFeedLibraries, type ZLibrary } from "../zotero/library.js";
+import { itemsLoaded, type ZLibrary } from "../zotero/library.js";
 import { libraryRef, safe } from "../zotero/refs.js";
 import { paginate, parsePageArgs } from "./pagination.js";
 import { json, type ToolArgs, type ToolHandler, type ToolOutput } from "./types.js";
@@ -20,7 +20,7 @@ function libraryInfo(lib: ZLibrary): LibraryInfo {
 
 async function listLibraries(args: ToolArgs): Promise<ToolOutput> {
   const page = parsePageArgs(args);
-  return json(paginate(listNonFeedLibraries().map(libraryInfo), page));
+  return json(paginate((Zotero.Libraries.getAll() as ZLibrary[]).map(libraryInfo), page));
 }
 
 export const libraryHandlers = {

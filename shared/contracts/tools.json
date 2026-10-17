@@ -32,6 +32,20 @@
       "annotations": { "title": "Current Zotero selection", "readOnlyHint": true, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false }
     },
     {
+      "name": "get_current_view_items",
+      "title": "List current Zotero view",
+      "description": "List the actual rows in Zotero's active library item tree: personal/group library roots, collections, saved searches, Recently Read, My Publications, Unfiled Items, duplicates, trash, all feeds or an individual feed. Use for 'list items in this folder/view', even when get_current_context reports empty selection. Preserves current UI filters, sort and expanded child rows; includes rows beyond the screen, but not collapsed children. Requires the library tab to be active. Does not select items, mark feeds read, or change the view. Pagination pins the initial membership/order for two minutes (up to three recent listings); continuation returns that original view even if the UI changes. Item metadata is read when each page is returned. Omit cursor to refresh.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 },
+          "cursor": { "type": "string", "maxLength": 64, "description": "Opaque nextCursor from this tool." }
+        },
+        "additionalProperties": false
+      },
+      "annotations": { "title": "List current Zotero view", "readOnlyHint": true, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false }
+    },
+    {
       "name": "capture_prompt_context",
       "title": "Per-prompt Zotero snapshot (hook)",
       "description": "For client UserPromptSubmit hooks: captures the live Zotero selection/reader state for the message being submitted and returns it as hook JSON (hookSpecificOutput.additionalContext). Models should normally use get_current_context instead.",
@@ -57,7 +71,7 @@
     {
       "name": "list_libraries",
       "title": "List Zotero libraries",
-      "description": "List the personal library and group libraries (feeds excluded) with their libraryID, type, name and whether their items are loaded. Other tools default to the personal library when libraryID is omitted.",
+      "description": "List the personal library, group libraries and feed libraries with their libraryID, type, name and whether their items are loaded. Other tools default to the personal library when libraryID is omitted.",
       "inputSchema": {
         "type": "object",
         "properties": {

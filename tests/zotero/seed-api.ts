@@ -160,6 +160,7 @@ export interface FingerprintResult {
 export type UiAction =
   | { action: "report" }
   | { action: "selectLibrary"; libraryID: number }
+  | { action: "selectView"; type: "recentlyRead" | "publications" | "unfiled" | "duplicates" | "trash" | "feeds" }
   | { action: "selectCollection"; libraryID: number; key: string }
   | { action: "selectSavedSearch"; libraryID: number; key: string }
   | { action: "selectItems"; libraryID: number; keys: string[] }

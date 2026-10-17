@@ -20,7 +20,6 @@ import {
 import type { AnnotationRef } from "../../../../shared/types/tools.js";
 import {
   getLoadedItem,
-  isFeedLibrary,
   withTimeout,
   type ZCollection,
   type ZItem,
@@ -133,18 +132,6 @@ function tabEntry(tabs: TabsLike, tabID: string): TabEntry | null {
   );
 }
 
-function libraryIsFeed(libraryID: number, cache: Map<number, boolean>): boolean {
-  let feed = cache.get(libraryID);
-  if (feed === undefined) {
-    feed = safe(() => {
-      const lib = Zotero.Libraries.get(libraryID) as ZLibrary | false;
-      return !!lib && isFeedLibrary(lib);
-    }, false);
-    cache.set(libraryID, feed);
-  }
-  return feed;
-}
-
 function librarySelection(pane: PaneLike, tabType: ActiveTabType): ZItem[] {
   // Zotero 11 returns the items-tree selection for {libraryTabOnly: true} whatever tab is active. A signature
   // without the option would return the reader's parent item instead, so then trust it only in the library tab.
@@ -153,11 +140,8 @@ function librarySelection(pane: PaneLike, tabType: ActiveTabType): ZItem[] {
   return tabType === "library" ? pane.getSelectedItems(false) : [];
 }
 
-function selectedItems(pane: PaneLike, tabType: ActiveTabType, warnings: string[]): SnapshotItems {
-  const feedCache = new Map<number, boolean>();
-  const all = librarySelection(pane, tabType);
-  const items = all.filter((item) => !libraryIsFeed(item.libraryID, feedCache));
-  if (items.length < all.length) warnings.push("Selected feed items are not reported (feeds are not supported).");
+function selectedItems(pane: PaneLike, tabType: ActiveTabType): SnapshotItems {
+  const items = librarySelection(pane, tabType);
   const refs = items.slice(0, SNAPSHOT_LIMITS.selectedItems).map(itemRef);
   return { count: items.length, items: refs, truncated: items.length > refs.length };
 }
@@ -174,7 +158,7 @@ function captureLibraryView(pane: PaneLike, tabType: ActiveTabType, warnings: st
     collections: [],
     savedSearches: [],
     otherRows: [],
-    selectedItems: selectedItems(pane, tabType, warnings),
+    selectedItems: selectedItems(pane, tabType),
   };
   let omitted = 0;
   const add = <T>(list: T[], make: () => T): void => {

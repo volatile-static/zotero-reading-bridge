@@ -25,6 +25,8 @@ Addressing: every item, collection, saved search, note and annotation is identif
 
 Pagination: list and search tools return {items, total, offset, limit, nextCursor}. To continue, pass nextCursor back unchanged as cursor; nextCursor null means the list is complete. Fetch further pages only when needed.
 
+Current folder/view: call get_current_view_items for the active library tab, including virtual views and feeds, even with empty selection. Do not use view IDs as collection keys.
+
 Typical workflow: search_items (query and/or tags, creator, itemType, collectionKey) -> get_items (up to 50 keys) for full metadata -> get_fulltext, get_notes, get_annotations or get_item_children for content. list_collections / get_collection and list_saved_searches / run_saved_search browse the library structure. get_schema lists item types and field names.
 
 Current selection: explicitly named items take precedence. For each message referring to current Zotero state, use that message's <zotero_snapshot>; without one, call get_current_context afresh. Refresh again if requested or the user reports a changed selection. Pin libraryID + key for the answer. Never treat earlier state as current. Status "empty" means nothing is selected; "unavailable" means state is unknown (try get_current_context to recover). capture_prompt_context is for hooks, not model calls.

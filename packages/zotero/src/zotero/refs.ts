@@ -36,6 +36,11 @@ export function libraryPrefix(libraryID: number): string {
 }
 
 export function itemSelectURI(libraryID: number, key: string): string {
+  // Zotero's select URI router cannot address feed libraries. Do not manufacture a personal-library link.
+  if (safe(() => {
+    const library = Zotero.Libraries.get(libraryID);
+    return !!library && library.libraryType === "feed";
+  }, false)) return "";
   return `zotero://select/${libraryPrefix(libraryID)}/items/${key}`;
 }
 
